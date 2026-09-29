@@ -239,7 +239,7 @@ test("OMP semantics: a foreign /jev (no legacy tool, lock silent) forces off", a
 
 // ---- Round 2: load-time throws (OMP 18.3.5 loader.ts: runtime actions throw until bound) -------
 
-/** Like `ompFakeRunner`, but `getCommands`/`getAllTools`/`getActiveTools` throw until session_start. */
+/** Like `ompFakeRunner`, but getters throw until session_start; late registrations are visible. */
 function loadingRunner(): Runner {
   const inner = ompFakeRunner();
   let bound = false;
@@ -275,26 +275,34 @@ test("real-OMP load order: legacy /jev loaded AFTER us overrides ours and is det
 test("real-OMP load order: no legacy → own marked /jev is not a conflict", async () => {
   const runner = loadingRunner();
   const s = loadInto(runner);
+  assert.deepEqual(runner.commandNames(), [], "our /jev waits for registry preflight");
   await runner.emit("session_start");
   assert.match(s.claim().statusText(), /^Jev: shadow/);
+  assert.deepEqual(runner.commandNames(), ["jev"], "our /jev registers after the preflight");
   await runner.emit("session_shutdown");
 });
 
-test("real-OMP load order: legacy /jev loaded BEFORE us (no tool, lock silent) forces off", { todo: "known limitation: getCommands throws during load, our /jev then overwrites the legacy row; only the lock or the legacy tool catch this order" }, async () => {
+test("real-OMP load order: legacy /jev loaded BEFORE us (no tool, lock silent) forces off", async () => {
   const runner = loadingRunner();
   loadLegacy(runner, { tool: false });
   const s = loadInto(runner);
+  assert.deepEqual(runner.commandNames(), ["jev"], "legacy /jev survives our load");
   await runner.emit("session_start");
-  assert.match(s.claim().statusText(), /^Jev: off/);
+  assert.match(s.claim().statusText(), /^Jev: off[\s\S]*non-own \/jev/);
+  assert.deepEqual(runner.commandNames(), ["jev"], "legacy /jev is not replaced");
+  assert.ok(s.events.some((e) => e.source === "adapter:legacy_conflict"));
   await runner.emit("session_shutdown");
 });
 
-test("real-OMP load order: legacy BEFORE us with its tool → forced off via the tool", { todo: "T105 int: since L3 registers its own jev_acceptance_gate, ours overwrites the legacy row in this load order (getAllTools throws during load); only the lock catches it" }, async () => {
+test("real-OMP load order: legacy BEFORE us with its tool → forced off via the tool", async () => {
   const runner = loadingRunner();
   loadLegacy(runner, { tool: true });
   const s = loadInto(runner);
+  assert.deepEqual(runner.commandNames(), ["jev"], "legacy /jev survives our load");
   await runner.emit("session_start");
   assert.match(s.claim().statusText(), /^Jev: off[\s\S]*non-own jev_acceptance_gate/);
+  assert.deepEqual(runner.commandNames(), ["jev"], "legacy /jev is not replaced");
+  assert.ok(s.events.some((e) => e.source === "adapter:legacy_conflict"));
   await runner.emit("session_shutdown");
 });
 

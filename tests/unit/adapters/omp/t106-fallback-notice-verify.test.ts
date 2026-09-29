@@ -25,6 +25,7 @@ interface HostOptions { ui?: "ok" | "none" | "throws" | "getter-throws" }
 function fakeHost(options: HostOptions) {
   const handlers = new Map<string, OmpHandler[]>();
   const commands = new Map<string, (args: string, ctx: OmpContext) => unknown>();
+  const commandRows = new Map<string, { name: string; source: "extension"; description?: string }>();
   const notes: { message: string; level: string }[] = [];
   const statusNotes: string[] = [];
   const view = { child: false };
@@ -47,11 +48,11 @@ function fakeHost(options: HostOptions) {
   const api = {
     pi: { VERSION: "18.4.1" },
     on: (event: string, handler: OmpHandler) => { handlers.set(event, [...(handlers.get(event) ?? []), handler]); },
-    registerCommand: (name: string, o: { handler: (args: string, ctx: OmpContext) => unknown }) => { commands.set(name, o.handler); },
+    registerCommand: (name: string, o: { handler: (args: string, ctx: OmpContext) => unknown; description?: string }) => { commands.set(name, o.handler); commandRows.set(name, { name, source: "extension", description: o.description }); },
     registerTool: () => {},
     getAllTools: () => [{ name: "read", description: "Read a file", parameters: { type: "object", properties: {} }, sourceInfo: { source: "builtin" } }],
     getActiveTools: () => ["read"],
-    getCommands: () => [],
+    getCommands: () => [...commandRows.values()],
     getThinkingLevel: () => undefined,
     setActiveTools: async () => {},
     setModel: () => true,

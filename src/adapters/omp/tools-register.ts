@@ -1,9 +1,9 @@
 /**
  * Registration of this adapter's OMP tools: `jev_route`, `jev_acceptance_gate`,
- * `foreman_assess`. Registered once at load (`register()`), each only when `canRegister(name)`
- * (legacy conflict known at load → the shared name is left to the legacy plugin). Results use the
- * Pi completion contract (`CompletionResult` as JSON text and details). A host without
- * `registerTool` gets none.
+ * `foreman_assess`. Registered once after ownership is checked (at load if OMP exposes its
+ * registries, otherwise at `session_start`). A legacy conflict leaves shared names to the
+ * legacy plugin. Results use the Pi completion contract (`CompletionResult` as JSON text and
+ * details). A host without `registerTool` gets none.
  */
 import { ACCEPTANCE_TOOL, FOREMAN_TOOL } from "../core/lifecycle.ts";
 import type { HostPort, HostToolResult } from "../core/port.ts";

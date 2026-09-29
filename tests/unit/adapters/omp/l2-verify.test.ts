@@ -40,7 +40,7 @@ interface HostOptions {
 async function fakeHost(options: HostOptions = {}) {
   const cwd = await mkdtemp(join(tmpdir(), "omp-l2v-"));
   const handlers = new Map<string, OmpHandler[]>();
-  const commands = new Map<string, { handler: (args: string, ctx: OmpContext) => unknown }>();
+  const commands = new Map<string, { handler: (args: string, ctx: OmpContext) => unknown; description?: string }>();
   let active = [...NATIVE];
   let setCount = 0;
   const setterCalls: string[] = [];
@@ -68,6 +68,7 @@ async function fakeHost(options: HostOptions = {}) {
     pi: { VERSION: "18.3.5" },
     on(event, handler) { handlers.set(event, [...(handlers.get(event) ?? []), handler]); },
     registerCommand(name, command) { commands.set(name, command as never); },
+    getCommands: () => [...commands.entries()].map(([name, c]) => ({ name, source: "extension" as const, description: c.description })),
     getAllTools: () => TOOLS,
     getActiveTools: () => [...active],
     getThinkingLevel: () => "medium",

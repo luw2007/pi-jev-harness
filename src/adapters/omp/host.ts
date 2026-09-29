@@ -12,10 +12,10 @@
  *
  * foundation (extension points for L2–L6):
  * - Host access goes through the host port (`OmpHost.port`, `./port.ts`, `../core/port.ts`).
- * - Legacy `@omp-jev/harness` coexistence (`./legacy.ts`): a conflict found at load time (plugins
- *   lock) registers neither `/jev` nor any legacy-named tool; one found at `session_start` forces
- *   the session off. Both record `adapter:legacy_conflict` and show in `/jev status`. Lanes that
- *   register tools do it in `register()` and only when `canRegister(name)` is true.
+ * - Legacy `@omp-jev/harness` coexistence (`./legacy.ts`): a conflict found in the plugins lock
+ *   suppresses shared names at load time; a runtime conflict at `session_start` forces off.
+ *   If registry getters are unavailable during load, shared registration waits for that check.
+ *   Both paths record `adapter:legacy_conflict` and show in `/jev status`.
  * - Config `mode: "on"` parses (OMP opt-in) and is honored; each capability acts only when its
  *   own switch is on (`context.request`, `context.compaction`, `context.proactive.mode`).
  * - Config `mode: "on"` (OMP opt-in) is effective: only capabilities whose own switch is on change
@@ -41,7 +41,7 @@ import { createOmpGates } from "./gates.ts";
 import { createOmpPort, type OmpPort } from "./port.ts";
 import { detectProfile, type OmpProfile } from "./profile.ts";
 import { hostToolsFromOmp } from "./tools.ts";
-import type { OmpAgentEndEvent, OmpBeforeAgentStartEvent, OmpContext, OmpContextEvent, OmpExtensionAPI, OmpSessionBeforeCompactEvent, OmpSessionStopEvent, OmpToolCallEvent } from "./types.ts";
+import type { OmpAgentEndEvent, OmpBeforeAgentStartEvent, OmpContext, OmpContextEvent, OmpExtensionAPI, OmpSessionBeforeCompactEvent, OmpSessionStopEvent, OmpToolCallEvent, OmpToolInfo } from "./types.ts";
 import { createOmpCompaction, type OmpCompaction } from "./compaction.ts";
 import { createOmpContextReducer, recallToolDefinition, RECALL_TOOL, type OmpContextReducer } from "./context.ts";
 import { ompContextSettings, ompTelemetryEnabled, ompTelemetryMaxBytes } from "./context-settings.ts";
@@ -203,6 +203,8 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
   let loadConflict: string | undefined;
   let lockReason: string | undefined;
   let ownsCommand = false;
+  let sharedRegistered = false;
+  let deferSharedRegistration = false;
   let session: SessionState | undefined;
   let duplicateLoads = 0;
   let duplicatesRecorded = 0;
@@ -304,13 +306,45 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
   /** Runtime check at session start; host runtime actions are unavailable during load. */
   function sessionConflict(): string | undefined {
     if (lockReason) return lockReason;
-    let tools: ReturnType<typeof port.getAllTools> | undefined;
+    let tools: OmpToolInfo[] | undefined;
     try {
       tools = port.getAllTools();
     } catch {
       tools = undefined;
     }
-    return runtimeConflict(tools, commandRows(), ownsCommand, deps.packageRoot);
+    const commands = commandRows();
+    if (deferSharedRegistration && (tools === undefined || commands === undefined))
+      return "OMP registry unavailable at session_start; cannot verify /jev ownership";
+    return runtimeConflict(tools, commands, ownsCommand, deps.packageRoot);
+  }
+
+  /** Register shared names once, only after load-time or session-start ownership checks. */
+  function registerShared() {
+    if (sharedRegistered || loadConflict) return;
+    sharedRegistered = true;
+    if (api.registerTool && canRegister(RECALL_TOOL)) {
+      port.registerTool(recallToolDefinition((params, ctx) => {
+        const state = session;
+        if (!state || state.closed) throw new Error("jev_recall: no active session");
+        return state.context.recallTool(params, ctx);
+      }));
+      recallRegistered = true;
+    }
+    port.registerCommand(LEGACY_COMMAND, { description: OWN_COMMAND_DESCRIPTION, getArgumentCompletions: jevCompletions, handler: command });
+    ownsCommand = true;
+    registerOmpTools(port, canRegister, {
+      assess: async (tool, params, ctx) => {
+        const state = active();
+        if (!state) return assessOffResult(tool);
+        const branch = (() => { try { return ctx.sessionManager.getBranch?.() ?? []; } catch { return []; } })();
+        const messages = branch.flatMap((entry) => ((entry as { type?: unknown }).type === "message" ? [(entry as { message?: unknown }).message] : []));
+        return state.stop.assessTool(tool, params, messages, state.mode);
+      },
+      route: async (params) => {
+        const state = active();
+        return state ? state.stop.routeTool(params, state.mode) : routeOffResult();
+      },
+    });
   }
 
   async function startSession() {
@@ -318,7 +352,10 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
     const legacy = await deps.loadLegacyConfig().catch((): LegacyConfig => ({ dir: "" }));
     const jev = createJevAccess({ config: loaded.config, env: deps.env, onChainAttempt: (attempt) => { if (session) onChainAttempt(session, attempt); },
       ...(deps.legacyProvidersPath !== undefined ? { legacyProvidersPath: deps.legacyProvidersPath } : {}), ...(deps.readFile ? { readFile: deps.readFile } : {}) });
+    // Check before claiming shared names; in OMP earlier session_start handlers can bind their
+    // registration APIs only after ours has awaited configuration loading.
     const legacyConflict = sessionConflict();
+    if (deferSharedRegistration && !legacyConflict) registerShared();
     const runId = `run_${deps.newId()}`;
     session = {
       runId,
@@ -737,41 +774,21 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
     canRegister,
     register() {
       lockReason = lockConflict(deps.readPluginsLock);
-      loadConflict = lockReason ?? runtimeConflict(undefined, commandRows(), false, deps.packageRoot);
+      let loadTools: OmpToolInfo[] | undefined;
+      try { loadTools = port.getAllTools(); } catch { /* real OMP binds actions after loading */ }
+      const loadCommands = commandRows();
+      loadConflict = lockReason ?? runtimeConflict(loadTools, loadCommands, false, deps.packageRoot);
       // No profile: session_start only, to record the no_profile diagnostic; mode stays off.
       for (const name of profile.spec?.events ?? ["session_start"]) {
         const handler = handlers[name];
         if (handler) api.on(name, handler as (event: unknown, ctx: OmpContext) => unknown);
       }
-      // No registration at all while a load-time legacy conflict is known.
-      if (api.registerTool && !loadConflict && canRegister(RECALL_TOOL)) {
-        port.registerTool(recallToolDefinition((params, ctx) => {
-          const state = session;
-          if (!state || state.closed) throw new Error("jev_recall: no active session");
-          return state.context.recallTool(params, ctx);
-        }));
-        recallRegistered = true;
-      }
-      if (!loadConflict) {
-        port.registerCommand(LEGACY_COMMAND, { description: OWN_COMMAND_DESCRIPTION, getArgumentCompletions: jevCompletions, handler: command });
-        ownsCommand = true;
-      }
-      registerOmpTools(port, canRegister, {
-        assess: async (tool, params, ctx) => {
-          const state = active();
-          if (!state) return assessOffResult(tool);
-          const branch = (() => { try { return ctx.sessionManager.getBranch?.() ?? []; } catch { return []; } })();
-          const messages = branch.flatMap((entry) => ((entry as { type?: unknown }).type === "message" ? [(entry as { message?: unknown }).message] : []));
-          return state.stop.assessTool(tool, params, messages, state.mode);
-        },
-        route: async (params) => {
-          const state = active();
-          return state ? state.stop.routeTool(params, state.mode) : routeOffResult();
-        },
-      });
-      // loadMode essential: OMP 18.3.5 mounts undeclared extension tools under xdev ("discoverable"),
-      // so they never reach the model's top-level tool list. Like every tool of ours: nothing is
-      // registered while a load-time legacy conflict is known.
+      // Real OMP getters throw during load. Registering here would overwrite an earlier
+      // extension's names before ownership could be checked at session_start.
+      deferSharedRegistration = loadTools === undefined || loadCommands === undefined;
+      if (!deferSharedRegistration) registerShared();
+      // jev_plan is not a legacy name; it remains available even if shared registration
+      // has to wait until session_start. The lock still suppresses all tools as before.
       if (!loadConflict && canRegister(JEV_PLAN_TOOL)) api.registerTool?.({ name: JEV_PLAN_TOOL, label: "Jev Route Agent Planner", loadMode: "essential",
         description: "Derives and arbitrates subagent delegation topology (direct, single, parallel, dag) using Jev.",
         parameters: JEV_PLAN_PARAMETERS, execute: (_id, params, signal) => planTool(params, signal) });

@@ -27,6 +27,7 @@ interface Options { hasUI?: boolean; confirm?: boolean; child?: boolean; hang?: 
 async function fakeHost(options: Options = {}) {
   const cwd = await mkdtemp(join(tmpdir(), "omp-l2-"));
   const handlers = new Map<string, OmpHandler[]>();
+  const commands = new Map<string, { name: string; source: "extension"; description?: string }>();
   let active = TOOLS.map((tool) => tool.name);
   const setterCalls: string[] = [];
   const confirms: string[] = [];
@@ -48,7 +49,8 @@ async function fakeHost(options: Options = {}) {
   const api: OmpExtensionAPI = {
     pi: { VERSION: "18.3.5" },
     on(event, handler) { handlers.set(event, [...(handlers.get(event) ?? []), handler]); },
-    registerCommand() {},
+    registerCommand(name, options) { commands.set(name, { name, source: "extension", description: options?.description }); },
+    getCommands: () => [...commands.values()],
     getAllTools: () => TOOLS,
     getActiveTools: () => [...active],
     getThinkingLevel: () => "medium",

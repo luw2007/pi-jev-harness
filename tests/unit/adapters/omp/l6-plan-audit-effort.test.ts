@@ -50,6 +50,7 @@ function fakeJev(choices: Answers = {}) {
 function fakeHost() {
   const handlers = new Map<string, OmpHandler[]>();
   const tools = new Map<string, OmpToolDefinition>();
+  const commands = new Map<string, { name: string; source: "extension"; description?: string }>();
   const calls: string[] = [];
   const ctx: OmpContext = {
     model: undefined,
@@ -61,7 +62,8 @@ function fakeHost() {
   const api: OmpExtensionAPI = {
     pi: { VERSION: "18.3.5" },
     on: (event, handler) => void handlers.set(event, [...(handlers.get(event) ?? []), handler]),
-    registerCommand: () => {},
+    registerCommand: (name, options) => void commands.set(name, { name, source: "extension", description: options?.description }),
+    getCommands: () => [...commands.values()],
     registerTool: (tool) => void tools.set(tool.name, tool),
     getAllTools: () => [{ name: "read", description: "Read a file", parameters: { type: "object", properties: {} } }],
     getActiveTools: () => ["read"],

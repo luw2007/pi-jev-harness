@@ -12,6 +12,7 @@ import type { AuditInput } from "../../../../src/telemetry/audit.ts";
 
 function setup(config: Record<string, unknown>) {
   const handlers = new Map<string, OmpHandler[]>();
+  const commandRows = new Map<string, { name: string; source: "extension"; description?: string }>();
   const ctx = {
     hasUI: false,
     cwd: "/tmp",
@@ -28,11 +29,11 @@ function setup(config: Record<string, unknown>) {
   const api = {
     pi: { VERSION: "18.4.1" },
     on: (event: string, handler: OmpHandler) => { handlers.set(event, [...(handlers.get(event) ?? []), handler]); },
-    registerCommand: () => {},
+    registerCommand: (name: string, o?: { description?: string }) => { commandRows.set(name, { name, source: "extension", description: o?.description }); },
     registerTool: () => {},
     getAllTools: () => [{ name: "bash", description: "Run", parameters: { type: "object", properties: {} }, sourceInfo: { source: "builtin" } }],
     getActiveTools: () => ["bash"],
-    getCommands: () => [],
+    getCommands: () => [...commandRows.values()],
     getThinkingLevel: () => undefined,
     setActiveTools: async () => {},
     setModel: () => true,

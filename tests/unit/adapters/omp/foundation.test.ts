@@ -201,8 +201,8 @@ test("legacy enabled in plugins lock: /jev not registered, forced off, diagnosti
 test("non-own jev_acceptance_gate at session_start: forced off with diagnostic", async () => {
   const host = fakeHost([{ name: "jev_acceptance_gate", sourceInfo: { path: "/legacy/jev-harness/index.ts", source: "extension" } }]);
   const s = load(host, undefined);
-  // Load order: jev_recall, /jev, L3 tools, jev_plan; a forced-off session never activates jev_recall.
-  assert.deepEqual(host.commands, ["tool:jev_recall", "jev", "tool:jev_acceptance_gate", "tool:foreman_assess", "tool:jev_route", "tool:jev_plan"]);
+-  // The fake exposes tool registries during load; a conflicting legacy tool is detected immediately.
+-  assert.deepEqual(host.commands, []);
   await host.emit("session_start");
   assert.match(s.claim().statusText(), /^Jev: off[\s\S]*legacy conflict: non-own jev_acceptance_gate/);
   assert.ok(s.events.some((event) => event.source === "adapter:legacy_conflict"));

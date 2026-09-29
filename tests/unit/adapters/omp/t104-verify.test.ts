@@ -20,7 +20,7 @@ const MODELS: OmpModel[] = [
 
 function fakeHost(version: unknown = "18.3.5") {
   const handlers = new Map<string, OmpHandler[]>();
-  const commands = new Map<string, (args: string, ctx: OmpContext) => unknown>();
+  const commands = new Map<string, { handler: (args: string, ctx: OmpContext) => unknown; description?: string }>();
   const setterCalls: string[] = [];
   const notes: string[] = [];
   const ctx: OmpContext = {
@@ -33,7 +33,8 @@ function fakeHost(version: unknown = "18.3.5") {
   const api: OmpExtensionAPI = {
     pi: { VERSION: version },
     on(event, handler) { handlers.set(event, [...(handlers.get(event) ?? []), handler]); },
-    registerCommand(name, options) { commands.set(name, options.handler); },
+    registerCommand(name, options) { commands.set(name, { handler: options.handler, description: options.description }); },
+    getCommands: () => [...commands.entries()].map(([name, c]) => ({ name, source: "extension" as const, description: c.description })),
     getAllTools: () => [
       { name: "read", description: "Read a file", parameters: { type: "object", properties: {} }, sourceInfo: { source: "builtin" } },
       { name: "bash", description: "Run a shell command", parameters: { type: "object", properties: {} }, sourceInfo: { source: "builtin" } },

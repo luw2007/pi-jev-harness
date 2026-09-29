@@ -31,6 +31,7 @@ interface FakeHost {
 function fakeHost(version: unknown): FakeHost {
   const handlers = new Map<string, OmpHandler[]>();
   const commands: string[] = [];
+  const registeredCommands = new Map<string, { name: string; description?: string; source: "extension" }>();
   const setterCalls: string[] = [];
   const ctx: OmpContext = {
     model: MODELS[0],
@@ -44,9 +45,11 @@ function fakeHost(version: unknown): FakeHost {
     on(event, handler) {
       handlers.set(event, [...(handlers.get(event) ?? []), handler]);
     },
-    registerCommand(name) {
+    registerCommand(name, options) {
       commands.push(name);
+      registeredCommands.set(name, { name, description: options.description, source: "extension" });
     },
+    getCommands: () => [...registeredCommands.values()],
     getAllTools: () => [
       { name: "read", description: "Read a file", parameters: { type: "object", properties: {} }, sourceInfo: { source: "builtin" } },
       { name: "bash", description: "Run a shell command", parameters: { type: "object", properties: {} }, sourceInfo: { source: "builtin" } },

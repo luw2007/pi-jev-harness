@@ -48,7 +48,7 @@ interface HostOptions {
 
 function fakeHost(options: HostOptions = {}) {
   const handlers = new Map<string, OmpHandler[]>();
-  const commands = new Map<string, (args: string, ctx: OmpContext) => unknown>();
+  const commands = new Map<string, { handler: (args: string, ctx: OmpContext) => unknown; description?: string }>();
   const tools = new Map<string, OmpToolDefinition>();
   const setterCalls: string[] = [];
   const notes: Array<{ message: string; level?: string }> = [];
@@ -70,7 +70,8 @@ function fakeHost(options: HostOptions = {}) {
   const api: OmpExtensionAPI = {
     pi: { VERSION: "18.3.5" },
     on(event, handler) { handlers.set(event, [...(handlers.get(event) ?? []), handler]); },
-    registerCommand(name, command) { commands.set(name, command.handler); },
+    registerCommand(name, command) { commands.set(name, { handler: command.handler, description: command.description }); },
+    getCommands: () => [...commands.entries()].map(([name, c]) => ({ name, source: "extension" as const, description: c.description })),
     registerTool(tool) { tools.set(tool.name, tool); },
     getAllTools: () => [
       { name: "read", description: "Read a file", parameters: { type: "object", properties: {} }, sourceInfo: { source: "builtin" } },
@@ -89,7 +90,7 @@ function fakeHost(options: HostOptions = {}) {
   };
   const jev = async (args: string) => {
     notes.length = 0;
-    await commands.get("jev")!(args, ctx);
+    await commands.get("jev")!.handler(args, ctx);
     return notes.at(-1)!;
   };
   return { api, ctx, handlers, tools, setterCalls, pending, emit, jev };
