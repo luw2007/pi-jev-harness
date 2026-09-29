@@ -1,0 +1,387 @@
+[
+  {
+    "id": "R",
+    "name": "typesafe-router",
+    "url": "https://github.com/TypeSafeAI/typesafe-router",
+    "pinned_commit": "4c6855ccfc92ff0e40a71661685c9ead327a3715",
+    "current_head": "4c6855ccfc92ff0e40a71661685c9ead327a3715",
+    "license": "UNKNOWN",
+    "license_path": null,
+    "vendored": false,
+    "notes": "许可未明，不复制源码/测试/UI。",
+    "files": [],
+    "digest": [],
+    "adaptations": []
+  },
+  {
+    "id": "H",
+    "name": "jev-harness",
+    "url": "https://github.com/TypeSafeAI/jev-harness",
+    "pinned_commit": "44a4e3a17013b6458efd4cc2b3e8ca45efae60b8",
+    "current_head": "44a4e3a17013b6458efd4cc2b3e8ca45efae60b8",
+    "license": "MIT",
+    "license_path": "third_party/licenses/jev-harness.LICENSE",
+    "vendored": true,
+    "notes": "主要契约、工具路由、校验、回放和离线用例来源。",
+    "files": [
+      "src/routing/index.ts → vendor/jev-harness/src/routing/index.ts → ed3b0406a24cf9bce2dc2fe6c7e485e7253b045602589554ab3b8ed6e15137e1 → 7068c4cb597cb81e57d9e080e5db979775eed2d45a1859435e4bcb1455f548b3",
+      "src/routing/types.ts → vendor/jev-harness/src/routing/types.ts → c1cacf9fac45c9497659a0b0c3b8758861c4783beb099df87614ef936e51c6b9 → c1cacf9fac45c9497659a0b0c3b8758861c4783beb099df87614ef936e51c6b9",
+      "src/routing/catalog.ts → vendor/jev-harness/src/routing/catalog.ts → f5daf76d3c7c72ef80a17808d24040d75098b3fb78f4f8f1d9743949ecd7c606 → dd5fbe4f8bcea4f04acd5440c381414da36f0c2cb879107cf265034e8bb6caad",
+      "src/routing/context.ts → vendor/jev-harness/src/routing/context.ts → 8b1597e3ffe109888175f7ddf0d97dbaa7701aa51532d6a1b8186feae855e5dc → 6d0e4afddb33b00f2ad5be65cea62d87cbd78e8d090ed4e2a05b0ac3287b3cba",
+      "src/routing/route.ts → vendor/jev-harness/src/routing/route.ts → abd3e027ebe3994163f2fec8357643e60456d7a4f66b5834f363641a2541fd8f → 0023d0d878997eebf2df518c0ca956970b5fbf31a7219692274bc72a50ab7fc0",
+      "src/routing/bundle.ts → vendor/jev-harness/src/routing/bundle.ts → b097a3a00bb5a17c9ea2a25d05a19a72d11dfe7d385c5b4e5b79537da3d5aba2 → c8f7c039c20edc177259c1c6243334c4dcfbd6d02c363632a755ae2f5b39539f",
+      "src/routing/prepare.ts → vendor/jev-harness/src/routing/prepare.ts → e45d8a8457d73da7a437b72c2f07bb883a0e9eafd7b56d445166d691a091196c → 0e879fcc2b2d4880f9ef2788f8c947e131a6c241109568f1a4e4bdf371702cc7",
+      "src/contract/types.ts → vendor/jev-harness/src/contract/types.ts → b4eed4ae81c32c587b550d5270d24ca6e6f8d87ec0df22c048cb2326f9f608d1 → b4eed4ae81c32c587b550d5270d24ca6e6f8d87ec0df22c048cb2326f9f608d1",
+      "LICENSE → vendor/jev-harness/LICENSE → 030148ea9fd67bc985f38d5e29af7ab8383c1d160abdce09ad55cd81d4ea0985 → 030148ea9fd67bc985f38d5e29af7ab8383c1d160abdce09ad55cd81d4ea0985",
+      "src/contract/decide.ts → vendor/jev-harness/src/contract/decide.ts → 28e5dea5df034faa1b6136de1322586fc20811dce48faa64b92cc6cd05891cce → 8ddb89eba8e9dc83bf9991c4b3b964f3fb563a1704fbdfb6cdb99f96e931235c",
+      "src/contract/diff.ts → vendor/jev-harness/src/contract/diff.ts → 54f29729703a3189321b9d18d70896e7995d7b5b534b2b22344797b43f47ae8c → 54f29729703a3189321b9d18d70896e7995d7b5b534b2b22344797b43f47ae8c",
+      "src/contract/index.ts → vendor/jev-harness/src/contract/index.ts → e5979c4dfea72e4c1763f00a495cf8c262ea276e0babd791e1ff95c632c8c323 → 066d9f0aa872d85d9e69ad28355878c0c819acb284e73ab51e59c7e3e1d892c6",
+      "src/contract/input.ts → vendor/jev-harness/src/contract/input.ts → c9f0f9ac4d55a747d177416253eaa71cc7268b2020db15b52c353ca39ce55ecb → c9f0f9ac4d55a747d177416253eaa71cc7268b2020db15b52c353ca39ce55ecb",
+      "src/contract/payload.ts → vendor/jev-harness/src/contract/payload.ts → 17bb4e1672e6c01d4600d3d3138b6746918bf093ce9b195e9294d74547be871e → bc70e0cec9c30d27fd0bea64e58094f3d9d36666d4c4057b8404ffff179f3cc6",
+      "src/contract/review.ts → vendor/jev-harness/src/contract/review.ts → b369849d811970bfe98a1f7887834c991a07e6d558eba87b615981086a65eeda → 2de3a9cc78ff0bc70291cc497ec9b9e2f93ca08c5955ad6d64e04f5993a79bfe",
+      "src/contract/validate.ts → vendor/jev-harness/src/contract/validate.ts → 578afe9320101b76ea70e0588480e3afdf15c52151e2f4c983667284300bc451 → 777b13959cceef123133c2b9e3c8af1dc2b536ded7aa80e3abd9b380cc1cd968",
+      "src/audit/receipt.ts → vendor/jev-harness/src/audit/receipt.ts → 54074a1d948c8db0de618dbb44afe13f751214b27136b738a738875caeced934 → 303c8b68ac0d60b0aec0f9146200848170869b6cd6dfec6207bacbcc1b0182d8"
+    ],
+    "digest": [
+      {
+        "source": "src/routing/index.ts",
+        "target": "vendor/jev-harness/src/routing/index.ts",
+        "sha256_source": "ed3b0406a24cf9bce2dc2fe6c7e485e7253b045602589554ab3b8ed6e15137e1",
+        "sha256_target": "7068c4cb597cb81e57d9e080e5db979775eed2d45a1859435e4bcb1455f548b3"
+      },
+      {
+        "source": "src/routing/types.ts",
+        "target": "vendor/jev-harness/src/routing/types.ts",
+        "sha256_source": "c1cacf9fac45c9497659a0b0c3b8758861c4783beb099df87614ef936e51c6b9",
+        "sha256_target": "c1cacf9fac45c9497659a0b0c3b8758861c4783beb099df87614ef936e51c6b9"
+      },
+      {
+        "source": "src/routing/catalog.ts",
+        "target": "vendor/jev-harness/src/routing/catalog.ts",
+        "sha256_source": "f5daf76d3c7c72ef80a17808d24040d75098b3fb78f4f8f1d9743949ecd7c606",
+        "sha256_target": "dd5fbe4f8bcea4f04acd5440c381414da36f0c2cb879107cf265034e8bb6caad"
+      },
+      {
+        "source": "src/routing/context.ts",
+        "target": "vendor/jev-harness/src/routing/context.ts",
+        "sha256_source": "8b1597e3ffe109888175f7ddf0d97dbaa7701aa51532d6a1b8186feae855e5dc",
+        "sha256_target": "6d0e4afddb33b00f2ad5be65cea62d87cbd78e8d090ed4e2a05b0ac3287b3cba"
+      },
+      {
+        "source": "src/routing/route.ts",
+        "target": "vendor/jev-harness/src/routing/route.ts",
+        "sha256_source": "abd3e027ebe3994163f2fec8357643e60456d7a4f66b5834f363641a2541fd8f",
+        "sha256_target": "0023d0d878997eebf2df518c0ca956970b5fbf31a7219692274bc72a50ab7fc0"
+      },
+      {
+        "source": "src/routing/bundle.ts",
+        "target": "vendor/jev-harness/src/routing/bundle.ts",
+        "sha256_source": "b097a3a00bb5a17c9ea2a25d05a19a72d11dfe7d385c5b4e5b79537da3d5aba2",
+        "sha256_target": "c8f7c039c20edc177259c1c6243334c4dcfbd6d02c363632a755ae2f5b39539f"
+      },
+      {
+        "source": "src/routing/prepare.ts",
+        "target": "vendor/jev-harness/src/routing/prepare.ts",
+        "sha256_source": "e45d8a8457d73da7a437b72c2f07bb883a0e9eafd7b56d445166d691a091196c",
+        "sha256_target": "0e879fcc2b2d4880f9ef2788f8c947e131a6c241109568f1a4e4bdf371702cc7"
+      },
+      {
+        "source": "src/contract/types.ts",
+        "target": "vendor/jev-harness/src/contract/types.ts",
+        "sha256_source": "b4eed4ae81c32c587b550d5270d24ca6e6f8d87ec0df22c048cb2326f9f608d1",
+        "sha256_target": "b4eed4ae81c32c587b550d5270d24ca6e6f8d87ec0df22c048cb2326f9f608d1"
+      },
+      {
+        "source": "LICENSE",
+        "target": "vendor/jev-harness/LICENSE",
+        "sha256_source": "030148ea9fd67bc985f38d5e29af7ab8383c1d160abdce09ad55cd81d4ea0985",
+        "sha256_target": "030148ea9fd67bc985f38d5e29af7ab8383c1d160abdce09ad55cd81d4ea0985"
+      },
+      {
+        "source": "src/contract/decide.ts",
+        "target": "vendor/jev-harness/src/contract/decide.ts",
+        "sha256_source": "28e5dea5df034faa1b6136de1322586fc20811dce48faa64b92cc6cd05891cce",
+        "sha256_target": "8ddb89eba8e9dc83bf9991c4b3b964f3fb563a1704fbdfb6cdb99f96e931235c"
+      },
+      {
+        "source": "src/contract/diff.ts",
+        "target": "vendor/jev-harness/src/contract/diff.ts",
+        "sha256_source": "54f29729703a3189321b9d18d70896e7995d7b5b534b2b22344797b43f47ae8c",
+        "sha256_target": "54f29729703a3189321b9d18d70896e7995d7b5b534b2b22344797b43f47ae8c"
+      },
+      {
+        "source": "src/contract/index.ts",
+        "target": "vendor/jev-harness/src/contract/index.ts",
+        "sha256_source": "e5979c4dfea72e4c1763f00a495cf8c262ea276e0babd791e1ff95c632c8c323",
+        "sha256_target": "066d9f0aa872d85d9e69ad28355878c0c819acb284e73ab51e59c7e3e1d892c6"
+      },
+      {
+        "source": "src/contract/input.ts",
+        "target": "vendor/jev-harness/src/contract/input.ts",
+        "sha256_source": "c9f0f9ac4d55a747d177416253eaa71cc7268b2020db15b52c353ca39ce55ecb",
+        "sha256_target": "c9f0f9ac4d55a747d177416253eaa71cc7268b2020db15b52c353ca39ce55ecb"
+      },
+      {
+        "source": "src/contract/payload.ts",
+        "target": "vendor/jev-harness/src/contract/payload.ts",
+        "sha256_source": "17bb4e1672e6c01d4600d3d3138b6746918bf093ce9b195e9294d74547be871e",
+        "sha256_target": "bc70e0cec9c30d27fd0bea64e58094f3d9d36666d4c4057b8404ffff179f3cc6"
+      },
+      {
+        "source": "src/contract/review.ts",
+        "target": "vendor/jev-harness/src/contract/review.ts",
+        "sha256_source": "b369849d811970bfe98a1f7887834c991a07e6d558eba87b615981086a65eeda",
+        "sha256_target": "2de3a9cc78ff0bc70291cc497ec9b9e2f93ca08c5955ad6d64e04f5993a79bfe"
+      },
+      {
+        "source": "src/contract/validate.ts",
+        "target": "vendor/jev-harness/src/contract/validate.ts",
+        "sha256_source": "578afe9320101b76ea70e0588480e3afdf15c52151e2f4c983667284300bc451",
+        "sha256_target": "777b13959cceef123133c2b9e3c8af1dc2b536ded7aa80e3abd9b380cc1cd968"
+      },
+      {
+        "source": "src/audit/receipt.ts",
+        "target": "vendor/jev-harness/src/audit/receipt.ts",
+        "sha256_source": "54074a1d948c8db0de618dbb44afe13f751214b27136b738a738875caeced934",
+        "sha256_target": "303c8b68ac0d60b0aec0f9146200848170869b6cd6dfec6207bacbcc1b0182d8"
+      }
+    ],
+    "adaptations": [
+      {
+        "files": [
+          "vendor/jev-harness/src/routing/bundle.ts",
+          "vendor/jev-harness/src/routing/catalog.ts",
+          "vendor/jev-harness/src/routing/context.ts",
+          "vendor/jev-harness/src/routing/index.ts",
+          "vendor/jev-harness/src/routing/prepare.ts",
+          "vendor/jev-harness/src/routing/route.ts"
+        ],
+        "change": "相对 import 说明符的扩展名 .js → .ts（仅 import/export from 行），以便 Node 22 原生 TS 直跑与 tsc allowImportingTsExtensions；无逻辑改动。"
+      },
+      {
+        "files": [
+          "vendor/jev-harness/src/contract/decide.ts",
+          "vendor/jev-harness/src/contract/index.ts",
+          "vendor/jev-harness/src/contract/payload.ts",
+          "vendor/jev-harness/src/contract/review.ts",
+          "vendor/jev-harness/src/contract/validate.ts",
+          "vendor/jev-harness/src/audit/receipt.ts"
+        ],
+        "change": "相对 import/export 说明符补扩展名 .ts（原文无扩展名，如 \"./types\" → \"./types.ts\"），以便 Node 22 原生 TS 直跑；无逻辑改动。contract/diff.ts、contract/input.ts、contract/types.ts byte 一致。运行时依赖 zod@4.6.5（与 H 锁定版本一致）。"
+      }
+    ]
+  },
+  {
+    "id": "O",
+    "name": "omp-jev-extensions",
+    "url": "https://github.com/luw2007/omp-jev-extensions",
+    "pinned_commit": "0f93c809c2088c61fab4e613807e515ff9e65b1a",
+    "current_head": "89c5825a39f3fe1d29df328d7965d5d9e119e724",
+    "license": "MIT",
+    "license_path": "third_party/licenses/omp-jev-extensions.LICENSE",
+    "vendored": false,
+    "notes": "来源说明：改编代码来自同一作者的 MIT 许可作品 omp-jev-extensions 在 commit 0f93c809c2088c61fab4e613807e515ff9e65b1a 的版本；该 commit 未公开发布，公开仓库 https://github.com/luw2007/omp-jev-extensions 中没有包含这些改编代码的 commit。许可文本见 license_path。未 vendor，仅改编（adapted only）：src/ 中的目标文件是重写后的实现，文件头注明来源，不与 O byte 一致，不做三方 diff；同步上游时不覆盖。files 每项为「O 源文件 → 目标文件 → O 源文件 sha256（git show 0f93c80:<path>）」。digest 为空：没有逐字复制的文件，目标文件无可核对的一致哈希。LICENSE 复制到 third_party/licenses/omp-jev-extensions.LICENSE（与 O LICENSE sha256 dc692007… 一致）。二级来源：foreman 的十维问题与阈值在 O 中镜像自 thruwire/foreman policy.py，本仓经 O 间接取得，未直接读取 thruwire。未移植：各扩展的工具注册（jev_route、jev_acceptance_gate、foreman_assess 等）、key/env 读取、审计写盘、telemetry 写入调用、模型/effort/工具组 setter、assessCompact。 改编自 all-model-router 的 src/router/{models,window,types}.ts 已随模型路由删除（模型选择由 magpie 负责）。",
+    "files": [
+      "extensions/telemetry/writer.js → src/telemetry/writer.ts → c8f9ff4a53faf19989761d33249689feb8f8d090815b612bca5bddb516a46cb6",
+      "extensions/telemetry/report.js → src/telemetry/report.ts → 36a3639de6762e29c8f604e599fe4da35cb9d4858ddd9b5253056aa5fdc1b118",
+      "extensions/acceptance-gate/stop-jev.ts → src/harness/completion.ts → 502a3b082f1b610432dd71df284402f930012616a1025c5b9792c475177786fb",
+      "extensions/foreman/foreman.ts → src/harness/completion.ts → 55ad56a5bf18e3641ef4cb0358e9220cdc1642a45982d6bfa7259b5b2cbcef25",
+      "extensions/jev-autorun/jev-autorun.ts → src/harness/continuation.ts → 82a7cb5aaa11c674ca4cd8232c1da86d8113f1aa8692c9dc390d0f204fd8fc90",
+      "LICENSE → third_party/licenses/omp-jev-extensions.LICENSE → dc6920077c58d7bbffb2af7d9bb9176e87e92a755a013cb4f0eb4a5a0094e57d"
+    ],
+    "digest": [],
+    "adaptations": [
+      {
+        "files": [
+          "src/telemetry/writer.ts"
+        ],
+        "source": "extensions/telemetry/writer.js",
+        "change": "非法类目整条拒收（原为替换字符）；指标白名单改为 tokens{input,output,cacheRead,cacheWrite}+costUsd，未知为 null；去掉 env/homedir/pid，改为注入 dir/now/fs；轮转改为递增序号不覆盖（O 只保留 .1）；新增 run/decision/attempt 关联与诊断计数；保留 fail-open。"
+      },
+      {
+        "files": [
+          "src/telemetry/report.ts"
+        ],
+        "source": "extensions/telemetry/report.js",
+        "change": "保留最近秩分位数与 known=0 时 sum 为 null；p95 换成 p50/p90/p99；分组改为 kind/outcome；新增 attempt 去重、读全部轮转文件、逐行白名单复核；去掉 CLI 与缓存/字符指标。"
+      },
+      {
+        "files": [
+          "src/harness/completion.ts"
+        ],
+        "source": "extensions/acceptance-gate/stop-jev.ts：runAcceptanceGate",
+        "change": "拆开 stopAllowed 与 completionStatus；服务失败从 accepted:true 改为 unavailable；先判宿主证据再问 Jev，问题改为评判宿主证据；去掉 key、env、审计写盘、telemetry、fetch，经注入 ask 走 src/jev；支持取消；拒绝时返回具体缺口。"
+      },
+      {
+        "files": [
+          "src/harness/completion.ts"
+        ],
+        "source": "extensions/foreman/foreman.ts：NOUL_QUESTIONS、THRESHOLDS、decide、runForemanAssess",
+        "change": "十维问题文本与阈值原样保留；decide 顺序与阈值不变，只接受校验后的分数；删除 ?? 0 + clamp01 与 emptyScores，缺维返回 invalid；服务失败从 fail-open CONTINUE 改为 unavailable；动作映射到 CompletionResult 并叠加宿主证据缺口。"
+      },
+      {
+        "files": [
+          "src/harness/continuation.ts"
+        ],
+        "source": "extensions/jev-autorun/jev-autorun.ts：createAutorunExtension 闭包 assessStop、probability、常量 CONTINUATION",
+        "change": "保留 done/autonomous 双条件、0.8 阈值、最多两次续跑、取消/待处理消息/后台任务即停、Jev 失败不续跑；闭包状态改为纯函数输入输出；新增预算、审批/外部阻塞、代次与模式对比、未完成动作条件；固定续跑提示改为由具体动作生成；不移植 askJev、审计/telemetry、配置加载、setter、assessCompact。"
+      }
+    ]
+  },
+  {
+    "id": "C",
+    "name": "omp-jev-compaction",
+    "url": "https://github.com/jerryfane/omp-jev-compaction",
+    "pinned_commit": "e21ab3273542a07984c4f2cfc4b3e746dc95930c",
+    "current_head": "e21ab3273542a07984c4f2cfc4b3e746dc95930c",
+    "license": "MIT",
+    "license_path": "third_party/licenses/omp-jev-compaction.LICENSE",
+    "vendored": true,
+    "notes": "保留外层 MIT 与 fast-jev 内核来源。外层 LICENSE 复制到 vendor/fast-jev/LICENSE；内核源码记在 fast-jev 项。C 的外层集成代码（context/hook/asker/map/render/spill/cache-guard）未 vendor。",
+    "files": [
+      "LICENSE → vendor/fast-jev/LICENSE → 06dcddbb6908a0c6dd4a9e8ec822eea41d5a460a53089fecccc8a68049e99241 → 06dcddbb6908a0c6dd4a9e8ec822eea41d5a460a53089fecccc8a68049e99241"
+    ],
+    "digest": [
+      {
+        "source": "LICENSE",
+        "target": "vendor/fast-jev/LICENSE",
+        "sha256_source": "06dcddbb6908a0c6dd4a9e8ec822eea41d5a460a53089fecccc8a68049e99241",
+        "sha256_target": "06dcddbb6908a0c6dd4a9e8ec822eea41d5a460a53089fecccc8a68049e99241"
+      }
+    ],
+    "adaptations": []
+  },
+  {
+    "id": "fast-jev",
+    "name": "fast-jev-compaction",
+    "url": "https://github.com/jerryfane/omp-jev-compaction",
+    "pinned_commit": "e21ab3273542a07984c4f2cfc4b3e746dc95930c",
+    "current_head": "e21ab3273542a07984c4f2cfc4b3e746dc95930c",
+    "license": "MIT",
+    "license_path": "third_party/licenses/fast-jev.LICENSE",
+    "vendored": true,
+    "notes": "files/digest 的 sha256_source 是 C（jerryfane/omp-jev-compaction）@e21ab3273542a07984c4f2cfc4b3e746dc95930c 中 src/vendor/fast-jev/* 的哈希（git show 读取），路径相对 C 仓库根；即 C 的本地打补丁副本，不是上游原文。上游 tamaratran/fast-jev-compaction@e3f262a7f4d42bd8dd32ced30d26176f7cb545b0 仅作来源记录，见 upstream 字段；本机有上游副本，已离线对照（git diff --no-index --numstat，上游 src/<f> 对 C 副本）。",
+    "upstream": {
+      "url": "https://github.com/tamaratran/fast-jev-compaction",
+      "commit": "e3f262a7f4d42bd8dd32ced30d26176f7cb545b0",
+      "current_head": "e3f262a7f4d42bd8dd32ced30d26176f7cb545b0",
+      "compared_offline": true,
+      "file_diffs": [
+        {
+          "upstream": "src/compact.ts",
+          "c_copy": "src/vendor/fast-jev/compact.ts",
+          "sha256_upstream": "6dcfe27bc00c1ba9065135a61a128bde0da41b9d300dbfd286de3cd6ce8b745b",
+          "added": 28,
+          "removed": 3
+        },
+        {
+          "upstream": "src/request.ts",
+          "c_copy": "src/vendor/fast-jev/request.ts",
+          "sha256_upstream": "aaa0922f89b1a38b304cf8cf922038641338cdae04e1a636c2a618c60c55b53a",
+          "added": 0,
+          "removed": 0
+        },
+        {
+          "upstream": "src/state.ts",
+          "c_copy": "src/vendor/fast-jev/state.ts",
+          "sha256_upstream": "585a9e571340a56d604ea7b90a395f286e575fe24b8394600c38064d972c03dc",
+          "added": 63,
+          "removed": 2
+        },
+        {
+          "upstream": "src/types.ts",
+          "c_copy": "src/vendor/fast-jev/types.ts",
+          "sha256_upstream": "dbb401b0f9b09af3a8ec4bb331f2c7141dfa70dc38c3dbfd501183d44930973f",
+          "added": 23,
+          "removed": 1
+        },
+        {
+          "upstream": "LICENSE",
+          "c_copy": "src/vendor/fast-jev/LICENSE.upstream",
+          "sha256_upstream": "06dcddbb6908a0c6dd4a9e8ec822eea41d5a460a53089fecccc8a68049e99241",
+          "added": 0,
+          "removed": 0
+        },
+        {
+          "upstream": null,
+          "c_copy": "src/vendor/fast-jev/UPSTREAM_COMMIT",
+          "sha256_upstream": null,
+          "added": null,
+          "removed": null,
+          "note": "C 自建文件，上游无对应；内容为 e3f262a7…"
+        }
+      ],
+      "diff_summary": "C 相对上游的改动：LOCAL PATCH allowDroppingCalls（默认 false）、ToolCall.cacheKey、FittedState.representedCalls、CompactResult 未提问候选统计等。"
+    },
+    "files": [
+      "src/vendor/fast-jev/compact.ts → vendor/fast-jev/compact.ts → 95ed502fd21a53d3bad8e1af0112d419ac1fafc53ddac8721af56960e0f091c4 → d413c4053e09ab83e686ac4ecbf5528e7badba281c8e7c248e2d9f96a030b319",
+      "src/vendor/fast-jev/request.ts → vendor/fast-jev/request.ts → aaa0922f89b1a38b304cf8cf922038641338cdae04e1a636c2a618c60c55b53a → a4c6f6b9d69eec7b9cb968bfa3e70fe2cc1542452894e1bc8cea8c99e9011f60",
+      "src/vendor/fast-jev/state.ts → vendor/fast-jev/state.ts → fbc0ff76bd4af58825db36d6c2ef93f1e516981ac0de62a9773237a1fb630752 → ed90ac3b8c88a224d443b8743d3e9c1fb31b438dbd26e79d784d5b8e78fc5bb6",
+      "src/vendor/fast-jev/types.ts → vendor/fast-jev/types.ts → 26d489ed31709fa0d4c4a91452b917d1f9385873a2278d8a19ab7a3fa8abc190 → 26d489ed31709fa0d4c4a91452b917d1f9385873a2278d8a19ab7a3fa8abc190",
+      "src/vendor/fast-jev/LICENSE.upstream → vendor/fast-jev/LICENSE.upstream → 06dcddbb6908a0c6dd4a9e8ec822eea41d5a460a53089fecccc8a68049e99241 → 06dcddbb6908a0c6dd4a9e8ec822eea41d5a460a53089fecccc8a68049e99241",
+      "src/vendor/fast-jev/UPSTREAM_COMMIT → vendor/fast-jev/UPSTREAM_COMMIT → ffd414f44628db511d9bd42adab83cdb243675341745299545064b368d701096 → ffd414f44628db511d9bd42adab83cdb243675341745299545064b368d701096"
+    ],
+    "digest": [
+      {
+        "source": "src/vendor/fast-jev/compact.ts",
+        "target": "vendor/fast-jev/compact.ts",
+        "sha256_source": "95ed502fd21a53d3bad8e1af0112d419ac1fafc53ddac8721af56960e0f091c4",
+        "sha256_target": "d413c4053e09ab83e686ac4ecbf5528e7badba281c8e7c248e2d9f96a030b319"
+      },
+      {
+        "source": "src/vendor/fast-jev/request.ts",
+        "target": "vendor/fast-jev/request.ts",
+        "sha256_source": "aaa0922f89b1a38b304cf8cf922038641338cdae04e1a636c2a618c60c55b53a",
+        "sha256_target": "a4c6f6b9d69eec7b9cb968bfa3e70fe2cc1542452894e1bc8cea8c99e9011f60"
+      },
+      {
+        "source": "src/vendor/fast-jev/state.ts",
+        "target": "vendor/fast-jev/state.ts",
+        "sha256_source": "fbc0ff76bd4af58825db36d6c2ef93f1e516981ac0de62a9773237a1fb630752",
+        "sha256_target": "ed90ac3b8c88a224d443b8743d3e9c1fb31b438dbd26e79d784d5b8e78fc5bb6"
+      },
+      {
+        "source": "src/vendor/fast-jev/types.ts",
+        "target": "vendor/fast-jev/types.ts",
+        "sha256_source": "26d489ed31709fa0d4c4a91452b917d1f9385873a2278d8a19ab7a3fa8abc190",
+        "sha256_target": "26d489ed31709fa0d4c4a91452b917d1f9385873a2278d8a19ab7a3fa8abc190"
+      },
+      {
+        "source": "src/vendor/fast-jev/LICENSE.upstream",
+        "target": "vendor/fast-jev/LICENSE.upstream",
+        "sha256_source": "06dcddbb6908a0c6dd4a9e8ec822eea41d5a460a53089fecccc8a68049e99241",
+        "sha256_target": "06dcddbb6908a0c6dd4a9e8ec822eea41d5a460a53089fecccc8a68049e99241"
+      },
+      {
+        "source": "src/vendor/fast-jev/UPSTREAM_COMMIT",
+        "target": "vendor/fast-jev/UPSTREAM_COMMIT",
+        "sha256_source": "ffd414f44628db511d9bd42adab83cdb243675341745299545064b368d701096",
+        "sha256_target": "ffd414f44628db511d9bd42adab83cdb243675341745299545064b368d701096"
+      }
+    ],
+    "adaptations": [
+      {
+        "files": [
+          "vendor/fast-jev/compact.ts",
+          "vendor/fast-jev/request.ts",
+          "vendor/fast-jev/state.ts"
+        ],
+        "change": "相对 import 说明符扩展名 .js → .ts（compact.ts 第 1、2、16 行，request.ts 第 1 行，state.ts 第 11 行），以便 Node 22 原生 TS 直跑与 tsc allowImportingTsExtensions；无逻辑改动。types.ts、LICENSE.upstream、UPSTREAM_COMMIT byte 一致。无运行时依赖（仅 node:crypto）。"
+      }
+    ]
+  },
+  {
+    "id": "typesafe-playground",
+    "name": "typesafe-playground",
+    "url": "https://github.com/TypeSafeAI/typesafe-playground",
+    "pinned_commit": "6fe5967dc020521a0731682b06c4d8eeeab95ffb",
+    "current_head": null,
+    "license": "MIT",
+    "license_path": "third_party/licenses/typesafe-playground.LICENSE",
+    "vendored": false,
+    "notes": "H 的 contract 二级来源；未复制源码，许可于 pinned_commit 处核对为 MIT。",
+    "files": [],
+    "digest": [],
+    "adaptations": []
+  }
+]

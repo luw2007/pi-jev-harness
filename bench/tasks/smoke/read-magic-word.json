@@ -1,0 +1,8 @@
+{
+  "id": "smoke-read-magic-word",
+  "category": "read_explain",
+  "repo": { "fixture": "answer-file" },
+  "prompt": "Read NOTES.md and write only the magic word it names into a new file ANSWER.txt. Do not run any other commands.",
+  "acceptance": ["node", "-e", "const t=require('fs').readFileSync('ANSWER.txt','utf8');process.exit(t.includes('PINEAPPLE')?0:1)"],
+  "timeoutSec": 180
+}

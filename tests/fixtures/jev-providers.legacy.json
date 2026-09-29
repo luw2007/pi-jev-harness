@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "default": "internal",
+  "fallback": ["typesafe", "openrouter"],
+  "providers": {
+    "internal": { "url": "https://jev.example.invalid/v1/systemone", "model": "jev-internal", "timeoutMs": 3000 },
+    "openrouter": { "apiKeyEnv": "FAKE_OPENROUTER_KEY_ENV" }
+  },
+  "capabilities": {
+    "compaction": { "default": "typesafe", "fallback": ["openrouter"] },
+    "planning": { "default": "internal" },
+    "modelRouting": { "default": "internal" }
+  }
+}

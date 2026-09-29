@@ -1,0 +1,55 @@
+{
+  "name": "pi-jev-harness",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luw2007/pi-jev-harness.git"
+  },
+  "homepage": "https://github.com/luw2007/pi-jev-harness#readme",
+  "bugs": {
+    "url": "https://github.com/luw2007/pi-jev-harness/issues"
+  },
+  "files": [
+    "src",
+    "vendor",
+    "third_party",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "packageManager": "pnpm@11.5.2",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./router": "./src/router/index.ts",
+    "./harness": "./src/harness/index.ts"
+  },
+  "bin": {
+    "pi-jev": "./src/cli.ts"
+  },
+  "omp": {
+    "name": "pi-jev-harness",
+    "extensions": [
+      "src/adapters/omp/index.ts"
+    ]
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"tests/unit/**/*.test.ts\"",
+    "test:host": "node --test tests/host/pi-shadow.test.ts tests/host/pi-harness.test.ts",
+    "bench:offline": "node --test \"bench/**/*.test.ts\" && node bench/smoke-offline.ts \"$(mktemp -d)\" --arms A,AA,B,D"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "0.87.1",
+    "@types/node": "^26.6.3",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  }
+}

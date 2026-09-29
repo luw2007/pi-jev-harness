@@ -1,0 +1,8 @@
+{
+  "id": "smoke-fix-add",
+  "category": "small_fix",
+  "repo": { "fixture": "tiny-fix" },
+  "prompt": "math.js has a bug: add(a, b) subtracts. Fix it with a single edit. Do not run any commands.",
+  "acceptance": ["node", "{taskDir}/check-fix-add.mjs"],
+  "timeoutSec": 180
+}

@@ -1,0 +1,21 @@
+# Known fake credentials used only by tests. Anything else is a real finding.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fake test keys"
+regexTarget = "secret"
+regexes = [
+  '''^verify-secret-key-1234567890$''',
+  '''^l2-test-key-0123456789$''',
+  '''^t105-int-verify-key-0123456789$''',
+  '''^test-key-0123456789$''',
+  '''^l2-verify-key-0123456789$''',
+  '''^abcdefghijklmnop$''',
+  '''^abcdefgh12345678$''',
+  '''^sk-test-SECRET-9f8e7d$''',
+  '''^tsk-t040-secret-0123456789$''',
+  '''^jevkey-LIVE-0123456789abcdef$''',
+  '''^sk-proj-ABCDEFGH12345678abcdefgh$''',
+  '''^(API_KEY=)?sk-live-0123456789abcdef$''',
+]

@@ -1,0 +1,57 @@
+{
+  "note": "Main model is fixed per bench invocation (--provider/--model). Every arm config is checked with the product's loadConfig before running. The config file accepts only mode off|shadow (mode on is per-session /jev mode on), so B-E observe in shadow; see bench/README.md.",
+  "arms": [
+    {
+      "id": "A",
+      "label": "原生（mode off）",
+      "baseline": true,
+      "config": { "mode": "off" }
+    },
+    {
+      "id": "AA",
+      "label": "A/A 噪声基线（与 A 相同）",
+      "aaOf": "A",
+      "config": { "mode": "off" }
+    },
+    {
+      "id": "B",
+      "label": "工具路由（shadow）",
+      "config": {
+        "mode": "shadow",
+        "outbound": { "taskIntent": true },
+        "router": { "tools": true }
+      }
+    },
+    {
+      "id": "C",
+      "label": "完成控制（shadow，续跑配置开启但 shadow 下只记录）",
+      "config": {
+        "mode": "shadow",
+        "outbound": { "taskIntent": true },
+        "router": { "tools": false },
+        "harness": { "continuation": { "enabled": true, "max": 2 } }
+      },
+      "note": "Continuation/enforce only change behavior in mode on, which the config file refuses."
+    },
+    {
+      "id": "D",
+      "label": "context（请求级 shadow）",
+      "config": {
+        "mode": "shadow",
+        "router": { "tools": false },
+        "context": { "request": "shadow" }
+      }
+    },
+    {
+      "id": "E",
+      "label": "组合（shadow：工具路由 + 完成控制 + context）",
+      "config": {
+        "mode": "shadow",
+        "outbound": { "taskIntent": true },
+        "router": { "tools": true },
+        "harness": { "continuation": { "enabled": true, "max": 2 } },
+        "context": { "request": "shadow" }
+      }
+    }
+  ]
+}

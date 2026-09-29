@@ -1,0 +1,217 @@
+// Adapted from jev-harness@44a4e3a17013b6458efd4cc2b3e8ca45efae60b8:examples/host/jev-choice.ts (MIT)
+/**
+ * Bounded Jev HTTP client. One logical call is one physical request, never retried.
+ * A single deadline covers connect, headers and body; oversized bodies are cancelled as
+ * soon as the limit is crossed; every dispatched request yields exactly one JevAttempt.
+ * Results carry categories only, never provider error text.
+ */
+import type {
+  ChoiceEvidence,
+  ChoiceQuestion,
+  JevAttempt,
+  JevAttemptStatus,
+  JevError,
+  JevProfile,
+  JevResult,
+  JevState,
+  NoulEvidence,
+  NoulQuestion,
+  WireResult,
+} from "./types.ts";
+import { choiceBody, noulBody, parseChoiceResponse, parseNoulResponse, validChoiceQuestions, validNoulQuestions } from "./wire.ts";
+
+export interface JevClientOptions {
+  profile: JevProfile;
+  /** Bearer key; absent sends no authorization header (keyless internal providers). */
+  key: string | undefined;
+  fetch: typeof fetch;
+  /** Epoch milliseconds; used for attempt `startedAt` and `durationMs`. */
+  now: () => number;
+  newId: () => string;
+  /** Called once per physical request. Throwing cannot change the call result. */
+  onAttempt?: (attempt: JevAttempt) => void;
+}
+
+export interface JevCallOptions {
+  decisionId: string;
+  /** Caller-owned data to judge. Serialized as-is into `state`. */
+  state: JevState;
+  signal?: AbortSignal;
+}
+
+export interface JevClient {
+  choice(questions: readonly ChoiceQuestion[], options: JevCallOptions): Promise<JevResult<ChoiceEvidence[]>>;
+  noul(questions: readonly NoulQuestion[], options: JevCallOptions): Promise<JevResult<NoulEvidence[]>>;
+}
+
+class BodyLimit extends Error {}
+const DEADLINE = Symbol("jev-deadline");
+
+/** Race host I/O against the signal, even when an injected fetch ignores abort. */
+async function raceAbort<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
+  let abort: () => void = () => {};
+  const cancelled = new Promise<never>((_, reject) => {
+    abort = () => reject(signal.reason);
+    if (signal.aborted) abort();
+    else signal.addEventListener("abort", abort, { once: true });
+  });
+  try {
+    return await Promise.race([operation, cancelled]);
+  } finally {
+    signal.removeEventListener("abort", abort);
+  }
+}
+
+/** Streams the body, counting bytes into `read`; cancels the stream on limit, abort or error. */
+async function readBoundedBody(
+  stream: ReadableStream<Uint8Array> | null,
+  limit: number,
+  signal: AbortSignal,
+  read: { bytes: number },
+): Promise<string> {
+  if (!stream) return "";
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let text = "";
+  try {
+    while (true) {
+      signal.throwIfAborted();
+      const chunk = await raceAbort(reader.read(), signal);
+      if (chunk.done) break;
+      read.bytes += chunk.value.byteLength;
+      if (read.bytes > limit) throw new BodyLimit();
+      text += decoder.decode(chunk.value, { stream: true });
+    }
+    return text + decoder.decode();
+  } catch (error) {
+    void reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+/** Deep copy then deep freeze: the request contract cannot change while a call is in flight. */
+function snapshot<T>(value: T): T {
+  const copy = structuredClone(value);
+  const freeze = (item: unknown): void => {
+    if (item === null || typeof item !== "object" || Object.isFrozen(item)) return;
+    Object.freeze(item);
+    for (const child of Object.values(item)) freeze(child);
+  };
+  freeze(copy);
+  return copy;
+}
+
+export function createJevClient(options: JevClientOptions): JevClient {
+  const { key, now, newId, onAttempt } = options;
+  const profile: Readonly<JevProfile> = snapshot(options.profile);
+  const upstreamFetch = options.fetch;
+
+  async function send<E>(
+    body: string,
+    call: JevCallOptions,
+    parse: (raw: unknown) => WireResult<E[]>,
+  ): Promise<JevResult<E[]>> {
+    if (call.signal?.aborted) return { ok: false, error: { kind: "aborted" } };
+    const requestBytes = new TextEncoder().encode(body).byteLength;
+    if (requestBytes > profile.maxRequestBytes) return { ok: false, error: { kind: "request_too_large" } };
+
+    const deadline = new AbortController();
+    const timer = setTimeout(() => deadline.abort(DEADLINE), profile.timeoutMs);
+    const signal = call.signal ? AbortSignal.any([deadline.signal, call.signal]) : deadline.signal;
+    const attemptId = newId();
+    const startedAt = now();
+    const read = { bytes: 0 };
+    let status: JevAttemptStatus;
+    let httpStatus: number | undefined;
+    let outcome: { ok: true; evidence: E[] } | { ok: false; error: JevError };
+    try {
+      const pending = upstreamFetch(profile.url, {
+        method: "POST",
+        headers:
+          key === undefined
+            ? { "content-type": "application/json" }
+            : { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body,
+        signal,
+      }).then((response) => {
+        // Lost the race to abort: release the connection.
+        if (signal.aborted) void response.body?.cancel().catch(() => {});
+        return response;
+      });
+      const response = await raceAbort(pending, signal);
+      httpStatus = response.status;
+      if (!response.ok) {
+        void response.body?.cancel().catch(() => {});
+        status = "http_error";
+        outcome = { ok: false, error: { kind: "http_error", httpStatus } };
+      } else {
+        const declared = Number(response.headers.get("content-length") ?? Number.NaN);
+        if (Number.isFinite(declared) && declared > profile.maxResponseBytes) {
+          void response.body?.cancel().catch(() => {});
+          throw new BodyLimit();
+        }
+        const text = await readBoundedBody(response.body, profile.maxResponseBytes, signal, read);
+        let raw: unknown;
+        try {
+          raw = JSON.parse(text);
+        } catch {
+          raw = undefined;
+        }
+        const parsed = raw === undefined ? null : parse(raw);
+        if (parsed?.ok) {
+          status = "ok";
+          outcome = { ok: true, evidence: parsed.value };
+        } else {
+          status = "malformed";
+          outcome = { ok: false, error: parsed ? { kind: "malformed", wire: parsed.error } : { kind: "malformed" } };
+        }
+      }
+    } catch (error) {
+      const failure = signal.aborted
+        ? signal.reason === DEADLINE ? "timeout" : "aborted"
+        : error instanceof BodyLimit ? "too_large" : "network_error";
+      status = failure;
+      outcome = { ok: false, error: httpStatus === undefined ? { kind: failure } : { kind: failure, httpStatus } };
+    } finally {
+      clearTimeout(timer);
+    }
+
+    const attempt: JevAttempt = {
+      attemptId,
+      decisionId: call.decisionId,
+      startedAt,
+      durationMs: now() - startedAt,
+      status,
+      ...(httpStatus === undefined ? {} : { httpStatus }),
+      requestBytes,
+      responseBytes: read.bytes,
+    };
+    try {
+      onAttempt?.({ ...attempt });
+    } catch {
+      // Metering cannot change the call result.
+    }
+    return outcome.ok ? { ok: true, evidence: outcome.evidence, attempt } : { ok: false, error: outcome.error, attempt };
+  }
+
+  return {
+    choice(input, options) {
+      const questions = snapshot(input);
+      const call = { decisionId: snapshot(options.decisionId), state: snapshot(options.state), signal: options.signal };
+      if (!validChoiceQuestions(questions)) return Promise.resolve({ ok: false, error: { kind: "invalid_request" } });
+      return send(choiceBody(profile.model, call.state, questions), call, (raw) =>
+        parseChoiceResponse(raw, questions, profile.model, profile.identity),
+      );
+    },
+    noul(input, options) {
+      const questions = snapshot(input);
+      const call = { decisionId: snapshot(options.decisionId), state: snapshot(options.state), signal: options.signal };
+      if (!validNoulQuestions(questions)) return Promise.resolve({ ok: false, error: { kind: "invalid_request" } });
+      return send(noulBody(profile.model, call.state, questions), call, (raw) =>
+        parseNoulResponse(raw, questions, profile.model, profile.identity),
+      );
+    },
+  };
+}
