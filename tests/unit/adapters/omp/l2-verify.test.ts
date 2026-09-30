@@ -10,6 +10,7 @@ import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setImmediate as nextTurn } from "node:timers/promises";
 import { test } from "node:test";
 import { loadOmpConfig } from "../../../../src/adapters/omp/config.ts";
 import { createExtension } from "../../../../src/adapters/omp/index.ts";
@@ -327,16 +328,26 @@ test("C2 hanging Jev: the review wait is capped by budget.waitMs and blocks with
   await s.done();
 });
 
-test("DEFECT: C2+C3 one tool_call handler: enforce wait + approval Jev wait together stay within one wait cap", async () => {
+test("DEFECT: C2+C3 one tool_call handler: enforce wait + approval Jev wait together stay within one wait cap", async (t) => {
   // write removed from denyTools so approval asks Jev after enforce: two sequential min(waitMs, 25 s)
   // waits in one handler, i.e. up to 2 × 20 s (default waitMs) > OMP's 30 s tool_call timeout.
   const waitMs = 150;
   // Review answers (favorable) just inside the cap; the approval risk question then hangs.
   const s = await setup({ ...ENFORCE, budget: { waitMs, maxRequestsPerTask: 4 }, approval: { enabled: true, denyTools: ["bash"] } }, { delays: [120, Infinity], confirm: true });
   await s.host.prompt(PROMPT);
+  // Virtual clock (timers + Date) so the 120 ms review answer and the 150 ms cap are exact, not a
+  // race against wall-clock scheduling. Real I/O (file reads in prepare) is awaited via setImmediate.
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const untilRequests = async (n: number) => { while (s.jev.state.requests < n) await nextTurn(); };
   const started = Date.now();
-  await s.host.tool("write", { path: "notes.txt", content: "hello" });
+  const handled = s.host.tool("write", { path: "notes.txt", content: "hello" });
+  await untilRequests(1);
+  t.mock.timers.tick(120); // review answers just inside the cap
+  await untilRequests(2); // approval risk question is sent and hangs
+  t.mock.timers.tick(waitMs - 120); // the shared Jev deadline is reached
+  await handled;
   const elapsed = Date.now() - started;
+  t.mock.timers.reset();
   assert.equal(s.jev.state.requests, 2, "review + risk question");
   assert.ok(elapsed < waitMs * 1.8, `handler active wait ${elapsed} ms for waitMs ${waitMs}`);
   await s.done();
