@@ -309,7 +309,10 @@ test("effort on (session on): setThinkingLevel once per decision, setModel never
   assert.equal(await suggestEffort({ ...base, mode: "on", client: client("xhigh"), signal: new AbortController().signal }), "xhigh");
   assert.equal(await suggestEffort({ ...base, mode: "on", client: client("low"), signal: new AbortController().signal }), "low");
   assert.deepEqual(calls, ["setThinkingLevel:xhigh", "setThinkingLevel:low"]);
-  assert.equal(await suggestEffort({ ...base, mode: "on", client: client(null), signal: AbortSignal.timeout(10) }), undefined);
+  const timeout = new AbortController();
+  const pending = suggestEffort({ ...base, mode: "on", client: client(null), signal: timeout.signal });
+  timeout.abort();
+  assert.equal(await pending, undefined);
   assert.equal(await suggestEffort({ ...base, mode: "shadow", client: client("high"), signal: new AbortController().signal }), "high");
   assert.deepEqual(calls, ["setThinkingLevel:xhigh", "setThinkingLevel:low"], "timeout and shadow set nothing");
 });
