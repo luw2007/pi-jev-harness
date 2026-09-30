@@ -1,4 +1,4 @@
-/** L7 (found on real omp): Jev may pick dag/parallel for a one-slice task; jev_plan degrades to single. */
+/** T105 L7 (found on real omp): Jev may pick dag/parallel for a one-slice task; jev_plan degrades to single. */
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { runJevPlan } from "../../../../src/adapters/omp/plan.ts";

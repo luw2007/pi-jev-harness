@@ -5,12 +5,12 @@
  * asynchronously against Jev, and records the result in telemetry. It never calls
  * setActiveTools/setModel/setThinkingLevel, never edits the prompt, and returns nothing that
  * changes host behavior. off sends no Jev request at all. Model routing is not handled here in
- * any mode: model selection is magpie's, and the adapter never observes or suggests a model.
+ * any mode (T051): model selection is magpie's, and the adapter never observes or suggests a model.
  *
  * on (per session, `/jev mode on`) changes behavior only through capabilities that are enabled
  * in config and whose gate is validated: enforced review kinds (`harness.enforce`), bounded
  * continuation (`harness.continuation.enabled`) and tool routing (`router.tools: "on"`, see the
- * block below). Everything else behaves exactly as in shadow.
+ * T037 block below). Everything else behaves exactly as in shadow.
  *
  * In shadow and on the action harness (`./harness.ts`) also sees `tool_call`, `tool_result`,
  * `message_end`, `input` (a user message while streaming), `agent_before_settle` (completion
@@ -25,6 +25,7 @@
  * tool set only while reduction is effectively on: shadow and off never change the tool set (E5).
  */
 import { createJevAccess, type JevAccess } from "../shared/jev-access.ts";
+import { formatJevDebugCompact, jevDebugDetails, renderJevDebug, type JevDebugDetails } from "../shared/jev-debug.ts";
 import { randomUUID } from "node:crypto";
 import type {
   AgentToolResult,
@@ -81,6 +82,8 @@ export interface HostDeps {
   createTelemetry: (dir: string) => TelemetryWriter;
   /** Archive filesystem for context spill/recall; tests inject failures. Default node:fs. */
   contextFs?: SpillFs;
+  /** Optional sink for opt-in Jev request/response diagnostics. */
+  writeDebug?: (text: string) => void;
 }
 
 export function defaultHostDeps(overrides: Partial<HostDeps> = {}): HostDeps {
@@ -92,6 +95,7 @@ export function defaultHostDeps(overrides: Partial<HostDeps> = {}): HostDeps {
     now: Date.now,
     newId: randomUUID,
     createTelemetry: (dir) => createTelemetryWriter({ dir, now: Date.now }),
+    writeDebug: (text) => process.stderr.write(text + "\n"),
     ...overrides,
   };
 }
@@ -107,9 +111,11 @@ interface InFlight {
 interface SessionState {
   runId: string;
   loaded: LoadedConfig;
-  /** single-url unless `jev.providers` is configured (no legacy mapping under Pi). */
+  /** T105 C9: single-url unless `jev.providers` is configured (no legacy mapping under Pi). */
   jev: JevAccess;
   mode: AdapterMode;
+  debug: boolean;
+  hasUI: boolean;
   telemetry: TelemetryWriter;
   pendingRecords: Set<Promise<boolean>>;
   inflight: Set<InFlight>;
@@ -120,14 +126,14 @@ interface SessionState {
   harness: PiHarness;
   /** Request-level context reduction (`context` event) and `jev_recall`. */
   context: PiContextHook;
-  // ---- per-task routing and tool apply ----
+  // ---- T037: per-task routing and tool apply ----
   /** Routing of the current user task; shared by the automatic route, the tool apply and `jev_route`. */
   task?: TaskRouting;
   /** Tool-routing outcome of the latest task, for `/jev status`. */
   toolState: ToolState;
 }
 
-// ---- per-task routing and tool apply ----
+// ---- T037: per-task routing and tool apply ----
 
 /** One tool-routing run: the router result, or why there is none. */
 interface ToolOutcome {
@@ -165,7 +171,7 @@ interface TaskRouting {
   /** Undefined when `router.tools` is off. */
   tools: Promise<ToolOutcome | undefined>;
   apply?: ToolApply;
-  /** Routing outcomes of this task; the harness writes a copy into run.json. */
+  /** Routing outcomes of this task; the harness writes a copy into run.json (T045 E7). */
   routing: RunRouting;
 }
 
@@ -188,7 +194,7 @@ const ROUTE_PARAMETERS = {
 
 export { ROUTE_TOOL };
 const ROUTE_NOTE = "仅返回工具路由建议：没有执行任何任务或工具，也没有因此改变工具集合或模型。";
-/** Model routing line in `/jev status` (model selection is magpie's). */
+/** Model routing line in `/jev status` (T051: model selection is magpie's). */
 export const MODEL_ROUTING_LINE = "模型路由：由 magpie 负责（harness 不处理）";
 
 function toolFallbackReason(outcome: ToolOutcome | undefined): string {
@@ -247,14 +253,14 @@ export interface PiHost {
 }
 
 export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () => void = () => {}): PiHost {
-  // Host access through the port; event wiring (`pi.on`) stays Pi-specific.
+  // Host access through the port (T105 L1); event wiring (`pi.on`) stays Pi-specific.
   const port = createPiPort(pi);
   let session: SessionState | undefined;
   let duplicateLoads = 0;
   let duplicatesRecorded = 0;
   let recallRegistered = false;
 
-  // task events carry the run.json runId when the telemetry schema accepts it
+  // T045 E7: task events carry the run.json runId when the telemetry schema accepts it
   // (`run_<uuid>`: every generated id and `pi-jev run`'s injected id). A custom PI_JEV_RUN_ID and
   // later tasks' `<id>-<n>` do not fit it; those keep the session id (upgrade: widen the schema).
   const record = (state: SessionState, event: TelemetryInput) => {
@@ -282,12 +288,27 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
     const loaded = await deps.loadConfig();
     const injected = loaded.config.harness.runId;
     const runId = injected !== undefined && TELEMETRY_ID_PATTERNS.runId.test(injected) ? injected : `run_${deps.newId()}`;
-    const jev = createJevAccess({ config: loaded.config, env: deps.env });
-    const state: SessionState = {
+    let state: SessionState;
+    const jev = createJevAccess({ config: loaded.config, env: deps.env, onDebug: (event) => {
+      if (!state?.debug || state.closed) return;
+      try {
+        if (typeof pi.registerEntryRenderer === "function" && typeof pi.appendEntry === "function" && state.hasUI) {
+          // Custom session entries render live and never enter the model's message context.
+          pi.appendEntry<JevDebugDetails>("jev-debug", jevDebugDetails(event));
+        } else {
+          (deps.writeDebug ?? ((text: string) => process.stderr.write(text + "\n")))(formatJevDebugCompact(event));
+        }
+      } catch {
+        // Debug output must never affect the Jev decision.
+      }
+    }, debugEnabled: () => state?.debug === true && !state.closed });
+    state = {
       runId,
       loaded,
       jev,
       mode: loaded.source === "invalid" ? "off" : loaded.config.mode,
+      debug: false,
+      hasUI: false,
       telemetry: deps.createTelemetry(loaded.config.telemetryDir),
       pendingRecords: new Set(),
       inflight: new Set(),
@@ -340,7 +361,7 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
       : undefined;
   }
 
-  /** the `route` chain; Pi stays single-url unless `jev.providers` is configured. */
+  /** C9: the `route` chain; Pi stays single-url unless `jev.providers` is configured. */
   function jevClient(state: SessionState): JevClient | undefined {
     const { config } = state.loaded;
     return state.jev.client("route", {
@@ -625,7 +646,7 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
     const state = session;
     if (!state || state.closed) return;
     state.closed = true;
-    restoreTools(state); // give back owned tool removals; never touches other tools
+    restoreTools(state); // T037: give back owned tool removals; never touches other tools
     abortAll(state, "shutdown");
     state.context.abort("shutdown");
     await state.harness.shutdown(reason);
@@ -645,6 +666,7 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
       : `config: defaults (no file at ${loaded.path})`;
     return [
       `Jev: ${mode} (this session)`,
+      `Jev debug: ${state.debug ? "on" : "off"} (this session)`,
       configLine,
       ...(loaded.notes ?? []),
       loaded.config.outbound.taskIntent
@@ -664,12 +686,24 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
   async function command(args: string, ctx: ExtensionCommandContext) {
     const [sub, value, extra] = args.trim().split(/\s+/).filter(Boolean);
     if (!sub || (sub === "status" && !value)) return ctx.ui.notify(statusText(), "info");
+    if (sub === "help" && !value) return ctx.ui.notify(
+      "Usage: /jev status | /jev mode off|shadow|on | /jev debug on|off|status\nDebug is off by default and opt-in per session. TUI: one line per request/response; Ctrl+O expands full bodies. Without a TUI, stderr shows summaries only. Warning: expanded debug exposes outbound task context and Jev responses.",
+      "info",
+    );
+    if (sub === "debug" && !extra && (value === "on" || value === "off" || value === "status")) {
+      if (!session || session.closed) return ctx.ui.notify("Jev: no active session", "warning");
+      if (value === "status") return ctx.ui.notify(`Jev debug: ${session.debug ? "on" : "off"} (this session)`, "info");
+      session.debug = value === "on";
+      return ctx.ui.notify(value === "on"
+        ? "Jev debug: on (this session). TUI summaries: Ctrl+O expands full bodies; without TUI stderr shows summaries only. Warning: expanded debug exposes outbound task context and Jev responses."
+        : "Jev debug: off (this session)", value === "on" ? "warning" : "info");
+    }
     if (sub === "mode" && !extra && (value === "off" || value === "shadow" || value === "on")) {
       if (!session) return ctx.ui.notify("Jev: no active session", "warning");
       if (session.loaded.source === "invalid" && value !== "off")
         return ctx.ui.notify(`Jev: config invalid (${session.loaded.reason}); staying off`, "warning");
       session.mode = value;
-      if (value !== "on") restoreTools(session); // only `on` keeps a routed tool set
+      if (value !== "on") restoreTools(session); // T037: only `on` keeps a routed tool set
       syncRecallTool(session);
       if (value === "off") {
         abortAll(session, "mode_off");
@@ -681,7 +715,7 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
       const effective = value === "on" ? `; 实际生效：${capabilitySummary(session).join("；")}` : "";
       return ctx.ui.notify(`Jev: ${value} (this session)${effective}`, "info");
     }
-    return ctx.ui.notify("Usage: /jev status | /jev mode off|shadow|on", "warning");
+    return ctx.ui.notify("Usage: /jev help | /jev status | /jev mode off|shadow|on | /jev debug on|off|status", "warning");
   }
 
   function capabilitySummary(state: SessionState): string[] {
@@ -726,8 +760,9 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
       });
       pi.on("before_agent_start", (event, ctx) => {
         const state = session;
+        if (state) state.hasUI = ctx.hasUI && ctx.mode === "tui";
         if (!state || state.closed || state.mode === "off") return undefined;
-        restoreTools(state); // a task that never settled gives back its tools first
+        restoreTools(state); // T037: a task that never settled gives back its tools first
         state.context.startTask();
         const routing = initialRouting(state);
         try {
@@ -742,7 +777,7 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
           noteFallback(state, "snapshot: host snapshot failed");
           if (routing.tools.outcome !== "off") routing.tools = { outcome: "fallback", reason: "宿主快照失败" };
         }
-        // mode on + router.tools on waits for the tool route (bounded by budget.waitMs) and
+        // T037: mode on + router.tools on waits for the tool route (bounded by budget.waitMs) and
         // applies it before the first provider request; everything else returns immediately.
         if (toolsApplied(state)) {
           if (state.task) return applyTools(state, state.task).then(() => undefined);
@@ -754,7 +789,7 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
       pi.on("tool_call", async (event, ctx) => {
         const state = session;
         if (!state || state.closed || state.mode === "off") return undefined;
-        checkExternal(state);
+        checkExternal(state); // T037
         return state.harness.toolCall(event, ctx);
       });
       pi.on("tool_result", (event, ctx) => {
@@ -783,7 +818,7 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
       // Notification only: closes the record, never prompts again.
       pi.on("agent_settled", async () => {
         const state = session;
-        if (state && !state.closed) restoreTools(state); // task end gives back owned removals
+        if (state && !state.closed) restoreTools(state); // T037: task end gives back owned removals
         if (state && !state.closed && state.mode !== "off") await state.harness.settle();
       });
       // Request-level context: shadow observes in the background, on may return reduced messages.
@@ -799,10 +834,13 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
       pi.on("session_shutdown", async (event) => {
         await shutdown(event.reason);
       });
+      if (typeof pi.registerEntryRenderer === "function") pi.registerEntryRenderer<JevDebugDetails>("jev-debug", (entry, options) => {
+        return entry.data ? renderJevDebug(entry.data, options.expanded) : undefined;
+      });
       pi.registerCommand("jev", {
-        description: "Jev harness status and mode (off | shadow | on)",
+        description: "Jev harness status, mode (off | shadow | on), and opt-in debug (on | off | status)",
         getArgumentCompletions: (prefix) =>
-          ["status", "mode off", "mode shadow", "mode on"].filter((item) => item.startsWith(prefix)).map((item) => ({ value: item, label: item })),
+          ["help", "status", "mode off", "mode shadow", "mode on", "debug on", "debug off", "debug status"].filter((item) => item.startsWith(prefix)).map((item) => ({ value: item, label: item })),
         handler: command,
       });
       pi.registerTool({
@@ -821,7 +859,7 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
         parameters: ASSESS_PARAMETERS,
         execute: async (_toolCallId, params) => assessTool(FOREMAN_TOOL, answerOf(params)),
       });
-      // ---- jev_route ----
+      // ---- T037: jev_route ----
       pi.registerTool({
         name: ROUTE_TOOL,
         label: "Jev route",

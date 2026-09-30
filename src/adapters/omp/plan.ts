@@ -1,5 +1,5 @@
 /**
- * `jev_plan`: advice-only topology planner for the OMP Route Agent.
+ * `jev_plan` (T105 C6): advice-only topology planner for the OMP Route Agent.
  *
  * Input and output are equivalent to the legacy `jev_route` tool
  * (`omp-jev-extensions/extensions/jev-harness/capabilities/planning.ts`): parameters

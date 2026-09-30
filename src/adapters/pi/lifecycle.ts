@@ -1,5 +1,5 @@
 /**
- * Per-task lifecycle wiring for Pi: the host-neutral lifecycle (`../core/lifecycle.ts`)
+ * Per-task lifecycle wiring for Pi: the host-neutral lifecycle (`../core/lifecycle.ts`, T105)
  * behind Pi's `agent_before_settle` boundary. Behavior is unchanged from before the extraction:
  * an aborted outcome cancels, an error outcome neither assesses nor continues, and a continuation
  * is returned as one visible `custom_message` entry plus `continue: true`.

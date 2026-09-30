@@ -1,5 +1,5 @@
 /**
- * verification of request-level context reduction on Pi's `context` event and
+ * T041 verification of T038: request-level context reduction on Pi's `context` event and
  * `jev_recall`, through the real extension entry on the fake Pi host. Jev is a fake fetch;
  * archives go to a temp directory. No real Pi, Jev or model.
  */

@@ -395,7 +395,7 @@ function escape(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// verifier regressions.
+// T031 verifier regressions from real-host observations.
 test("T031: a task whose model request ended in error is never completed, even without changes", async () => {
   const s = await session(shadowConfig());
   try {
@@ -423,7 +423,7 @@ test("T031: a file written by bash is in the changeset, so the task is not compl
   } finally { await s.h.cleanup(); }
 });
 
-// aborted runs (D3), explicit model-error status (D2), workspace changeset (D4), structured completion.
+// T036: aborted runs (D3), explicit model-error status (D2), workspace changeset (D4), structured completion.
 const MESSAGE_BASE = { provider: "p", model: "m", usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } }, timestamp: 0 };
 
 test("T036 D3: an aborted agent run is cancelled, never completed, even when a change was made", async () => {
@@ -478,7 +478,7 @@ test("T036 D2: a model error is failed with its reason; a later successful reply
   } finally { await s.h.cleanup(); }
 });
 
-// every model request fails (provider 503/401) before any successful turn or tool call.
+// T039: every model request fails (provider 503/401) before any successful turn or tool call.
 test("T039: a model error on the first turn writes a failed run once, with the provider message scrubbed", async () => {
   const secret = "sk-proj-ABCDEFGH12345678abcdefgh";
   const s = await session(shadowConfig(), noulAnswer, { PI_JEV_RUN_ID: "t039" });

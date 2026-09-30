@@ -7,10 +7,10 @@
  *      (`defaultProvider` / `defaultModel`);
  *   4. shadow with `outbound.taskIntent: false`: the fake Jev must receive zero requests.
  * Shadow runs 2–3 set `outbound.taskIntent: true` (otherwise nothing is sent). Every config keeps a
- * legacy `router.models` (three models): since model selection is magpie's, so it
+ * legacy `router.models` (three non-deepseek models): since T051 model selection is magpie's, so it
  * must be ignored; no run may ask a model question or change the model. Tool routing still observes.
  *
- * Model: one cheap model, one model request per run (4 per test run, ≤ 6 total). HOME
+ * Model: one cheap non-deepseek model, one model request per run (4 per test run, ≤ 6 total). HOME
  * is a temp directory; its `.pi/agent/models.json` holds only that provider, whose key command reads
  * the user's credential file by absolute path (read-only). Nothing under the real ~/.pi is touched.
  * Real Jev is never called: TYPESAFE_API_KEY is a fake value and PI_JEV_URL points at the fake.
@@ -24,11 +24,11 @@ import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
 
-// PI_JEV_HOST_PROVIDER / PI_JEV_HOST_MODEL override the pinned model when its upstream is down.
-const PROVIDER = process.env.PI_JEV_HOST_PROVIDER ?? "openrouter";
+// PI_JEV_HOST_PROVIDER / PI_JEV_HOST_MODEL override the pinned model when its upstream is down (T040).
+const PROVIDER = process.env.PI_JEV_HOST_PROVIDER ?? "gcloud";
 const MODEL_ID = process.env.PI_JEV_HOST_MODEL ?? "google/gemini-3-flash";
 const MODEL = `${PROVIDER}/${MODEL_ID}`;
-/** Legacy `router.models.allow` (ignored): three models of the test provider. */
+/** Legacy `router.models.allow` (T051: ignored): three non-deepseek models of the test provider. */
 const ALLOW = process.env.PI_JEV_HOST_ALLOW?.split(",") ?? [MODEL, `${PROVIDER}/google/gemini-3.1-flash-lite`, `${PROVIDER}/google/gemini-3.1-pro-low`];
 const PROMPT = "Reply with exactly the single word OK and nothing else. Do not use any tools.";
 const FAKE_KEY = "fake-typesafe-key-for-host-test";
@@ -66,8 +66,8 @@ function questionKind(id: string, question: { instructions?: unknown }): Questio
 /**
  * Counts requests and answers each question with a valid Choice built from the candidate set in
  * the request body. Tool questions: first non-clarification option leads. Model questions: the
- * first candidate that is neither the configured model nor excluded leads, so an applied
- * suggestion would show.
+ * first candidate that is neither the configured model nor a deepseek model leads, so an applied
+ * suggestion would show (and never names deepseek).
  */
 async function startFakeJev(): Promise<FakeJev> {
   const state = { requests: 0, questions: [] as QuestionKind[], modelCandidates: [] as string[], modelChoices: [] as string[] };
@@ -92,7 +92,7 @@ async function startFakeJev(): Promise<FakeJev> {
       state.questions.push(kinds[id]!);
       if (kinds[id] === "model") state.modelCandidates.push(...ids);
       const isModel = kinds[id] === "model";
-      const choice = ids.find((option) => option !== "needs_clarification" && !(isModel && (option === MODEL))) ?? ids[0]!;
+      const choice = ids.find((option) => option !== "needs_clarification" && !(isModel && (option === MODEL || /deepseek/i.test(option)))) ?? ids[0]!;
       if (isModel) state.modelChoices.push(choice);
       const rest = 0.3 / (ids.length - 1);
       return [id, { type: "choice", choice, confidence: 0.9, probabilities: Object.fromEntries(ids.map((option) => [option, option === choice ? 0.7 : rest])) }];
@@ -126,7 +126,7 @@ async function prepareHome(mode: "off" | "shadow", options: { defaultModel?: boo
   assert.ok(provider, `${PROVIDER} provider missing from the user's models.json`);
   const apiKey = typeof provider.apiKey === "string" ? provider.apiKey.replaceAll("$HOME", REAL_HOME) : provider.apiKey;
   await writeFile(join(agentDir, "models.json"), JSON.stringify({ providers: { [PROVIDER]: { ...provider, apiKey } } }));
-  const config = { mode, outbound: { taskIntent: options.taskIntent ?? true }, router: { models: { allow: ALLOW, excludeProviders: ["provider-x"] } } };
+  const config = { mode, outbound: { taskIntent: options.taskIntent ?? true }, router: { models: { allow: ALLOW, excludeProviders: ["deepseek"] } } };
   await writeFile(join(agentDir, "pi-jev-harness", "config.json"), JSON.stringify(config));
   if (options.defaultModel) await writeFile(join(agentDir, "settings.json"), JSON.stringify({ defaultProvider: PROVIDER, defaultModel: MODEL_ID }));
   return home;
@@ -140,6 +140,7 @@ interface RunResult {
 
 function runPi(home: string, cwd: string, jevUrl: string, options: { pinModel: boolean }): Promise<RunResult> {
   const args = ["-p", "--no-session", "--mode", "json", "--extension", EXTENSION, ...(options.pinModel ? ["--model", MODEL] : []), PROMPT];
+  assert.ok(!args.some((arg) => /deepseek/i.test(arg)));
   const env: NodeJS.ProcessEnv = { ...process.env, HOME: home, TYPESAFE_API_KEY: FAKE_KEY, PI_JEV_URL: jevUrl };
   delete env.PI_CODING_AGENT_DIR;
   const child = spawn("pi", args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
@@ -254,6 +255,7 @@ test("real pi: off and unauthorized outbound send no Jev request; shadow observe
     assert.ok(offRequests.length + shadowRequests.length + settingsRequests.length + withheldRequests.length <= 6, "model request budget");
     for (const row of [...offRequests, ...shadowRequests, ...settingsRequests, ...withheldRequests]) {
       assert.equal(row.stopReason, "stop");
+      assert.ok(!/deepseek/i.test(row.model));
     }
     assert.deepEqual(
       shadowRequests.map(({ provider, model, tools }) => ({ provider, model, tools })),
@@ -269,7 +271,7 @@ test("real pi: off and unauthorized outbound send no Jev request; shadow observe
     assert.ok(!shadowTelemetry.includes(FAKE_KEY), "no key in telemetry");
     assert.equal(offTelemetry, "", "off writes no route telemetry");
 
-    // Run 3: without a pin the model comes from settings.json; no model question is ever asked.
+    // Run 3: without a pin the model comes from settings.json; no model question is ever asked (T051).
     assert.deepEqual([offQuestions.model, shadowQuestions.model, settingsQuestions.model], [0, 0, 0], "T051: no model question");
     assert.deepEqual(jev.modelCandidates, [], "T051: no model candidate leaves the machine");
     assert.ok(settingsQuestions.tool > 0, "settings default model: shadow still asks the tool question");
@@ -285,7 +287,7 @@ test("real pi: off and unauthorized outbound send no Jev request; shadow observe
     assert.equal(withheldJevRequests, 0, "taskIntent=false: fake Jev receives zero requests");
     assert.deepEqual(withheldKinds.filter((event) => event.kind.startsWith("route_")).map((event) => `${event.kind}:${event.outcome}:${event.source}`),
       ["route_tools:withheld:outbound:not_authorized"]);
-    // the completion check is recorded too; without outbound consent it is unavailable, never ok.
+    // T040: the completion check (T027) is recorded too; without outbound consent it is unavailable, never ok.
     assert.deepEqual(withheldKinds.filter((event) => !event.kind.startsWith("route_")).map((event) => `${event.kind}:${event.outcome}`), ["completion:unavailable"]);
     assert.deepEqual(withheldRequests.map(({ provider, model, tools }) => ({ provider, model, tools })),
       offRequests.map(({ provider, model, tools }) => ({ provider, model, tools })), "withheld shadow leaves model and tools unchanged");

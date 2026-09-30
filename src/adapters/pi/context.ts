@@ -23,7 +23,7 @@
  * (`budget.maxRequestsPerTask`, separate counter from routing) is not spent. Otherwise no request
  * is sent and the reason is recorded. The remaining budget is handed to the reducer as its ask cap,
  * so a history needing more asks than are left is reduced partially: answers already paid for and
- * cached decisions still apply, the rest stays verbatim (defect 4). Only a reduction that
+ * cached decisions still apply, the rest stays verbatim (T041 defect 4). Only a reduction that
  * changed nothing because the budget ran out is reported as a budget fallback.
  *
  * Task revision: each user task (`startTask`, i.e. `before_agent_start`) is a new cache revision,
@@ -113,7 +113,7 @@ export interface ContextHookDeps {
 }
 
 /**
- * Host-neutral view of the handler context this hook reads. Pi's `ExtensionContext`
+ * Host-neutral view of the handler context this hook reads (T105 L4). Pi's `ExtensionContext`
  * satisfies it structurally; the OMP adapter builds one from its own context.
  */
 export interface ContextHookCtx {
@@ -195,7 +195,7 @@ export function createPiContextHook(deps: ContextHookDeps): PiContextHook {
     return next;
   }
 
-  // the `toolContext` chain. Pi (no legacy mapping) stays single-url unless `jev.providers` is set.
+  // C9: the `toolContext` chain. Pi (no legacy mapping) stays single-url unless `jev.providers` is set.
   const jev = deps.jev ?? createJevAccess({ config, env: deps.env });
   const client: JevClient | undefined = jev.client("toolContext", {
     fetch: (input, init) => {
@@ -334,7 +334,7 @@ export function createPiContextHook(deps: ContextHookDeps): PiContextHook {
 
   function fallbackOf(out: ReduceOutput | undefined, call: Call, timedOut: boolean, current: TaskStats): string | undefined {
     if (call.withheld === "credential") return "检测到凭据形态，未发送 Jev 请求";
-    // a budget spent on failed requests is a Jev outage, not normal use.
+    // T049: a budget spent on failed requests is a Jev outage, not normal use.
     if (call.withheld === "budget")
       return current.lastJevError ? `Jev 不可用（${current.lastJevError}），本任务 Jev 请求预算已被失败请求用完` : "本任务 Jev 请求预算已用完";
     if (!out) return "裁剪出错";

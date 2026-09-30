@@ -1,5 +1,5 @@
 /**
- * against a fake OMP host and a fake Jev: completion acceptance at
+ * T105 L3 (C4, C5, C10) against a fake OMP host and a fake Jev: completion acceptance at
  * `session_stop`, bounded continuation (exactly 0 / 1 / 2), no continuation with pending work or in
  * a child session, the registered tools, every `/jev` subcommand, legacy config mapping, and config
  * `mode: "on"` being effective. No network, no file writes.
@@ -48,8 +48,9 @@ interface HostOptions {
 
 function fakeHost(options: HostOptions = {}) {
   const handlers = new Map<string, OmpHandler[]>();
-  const commands = new Map<string, { handler: (args: string, ctx: OmpContext) => unknown; description?: string }>();
+  const commands = new Map<string, (args: string, ctx: OmpContext) => unknown>();
   const tools = new Map<string, OmpToolDefinition>();
+  const commandMap = new Map<string, { name: string; source: "extension"; description?: string }>();
   const setterCalls: string[] = [];
   const notes: Array<{ message: string; level?: string }> = [];
   const pending = { messages: false, jobs: 0 };
@@ -70,8 +71,11 @@ function fakeHost(options: HostOptions = {}) {
   const api: OmpExtensionAPI = {
     pi: { VERSION: "18.3.5" },
     on(event, handler) { handlers.set(event, [...(handlers.get(event) ?? []), handler]); },
-    registerCommand(name, command) { commands.set(name, { handler: command.handler, description: command.description }); },
-    getCommands: () => [...commands.entries()].map(([name, c]) => ({ name, source: "extension" as const, description: c.description })),
+    registerCommand(name, command) {
+      commands.set(name, command.handler);
+      commandMap.set(name, { name, source: "extension", description: command.description });
+    },
+    getCommands: () => [...commandMap.values()],
     registerTool(tool) { tools.set(tool.name, tool); },
     getAllTools: () => [
       { name: "read", description: "Read a file", parameters: { type: "object", properties: {} }, sourceInfo: { source: "builtin" } },
@@ -90,7 +94,7 @@ function fakeHost(options: HostOptions = {}) {
   };
   const jev = async (args: string) => {
     notes.length = 0;
-    await commands.get("jev")!.handler(args, ctx);
+    await commands.get("jev")!(args, ctx);
     return notes.at(-1)!;
   };
   return { api, ctx, handlers, tools, setterCalls, pending, emit, jev };
@@ -152,7 +156,7 @@ async function continuations(s: ReturnType<typeof setup>, limit = 5): Promise<nu
   return count;
 }
 
-// ---- bounded continuation ----------------------------------------------------------------
+// ---- C4: bounded continuation ----------------------------------------------------------------
 
 test("mode on, acceptance rejected: continues exactly 2 times, then stops", async () => {
   const s = setup(ON);
@@ -241,11 +245,11 @@ test("budget.maxRequestsPerTask 0: no Jev request at stop, no continuation", asy
   assert.equal(s.script.requests, 0);
 });
 
-// ---- tools ------------------------------------------------------------------------------
+// ---- C5: tools ------------------------------------------------------------------------------
 
 test("tools registered: jev_route, jev_acceptance_gate, foreman_assess; shared completion contract", async () => {
   const s = setup(ON, { accept: true });
-  // Plus jev_recall and jev_plan, registered next to the L3 tools.
+  // Plus jev_recall (L4) and jev_plan (L6), registered next to the L3 tools.
   assert.deepEqual([...s.host.tools.keys()].sort(), ["foreman_assess", "jev_acceptance_gate", "jev_plan", "jev_recall", "jev_route"]);
   // Before a session: unavailable, no request.
   const off = await s.host.tools.get("jev_acceptance_gate")!.execute("t0", {}, undefined, undefined, s.host.ctx);
@@ -278,7 +282,7 @@ test("jev_route while off: unavailable, no request", async () => {
   assert.equal(s.script.requests, 0);
 });
 
-// ---- /jev ------------------------------------------------------------------------------
+// ---- C10: /jev ------------------------------------------------------------------------------
 
 test("/jev subcommands: status, help, mode, acceptance, autorun, unknown", async () => {
   const s = setup(ON);

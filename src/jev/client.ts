@@ -30,6 +30,10 @@ export interface JevClientOptions {
   newId: () => string;
   /** Called once per physical request. Throwing cannot change the call result. */
   onAttempt?: (attempt: JevAttempt) => void;
+  /** Physical HTTP request and response debug events; observer failures never alter the result. */
+  onDebug?: (event: JevDebugEvent) => void;
+  /** Optional cheap gate for session switches; a throwing gate disables debug only. */
+  debugEnabled?: () => boolean;
 }
 
 export interface JevCallOptions {
@@ -42,6 +46,37 @@ export interface JevCallOptions {
 export interface JevClient {
   choice(questions: readonly ChoiceQuestion[], options: JevCallOptions): Promise<JevResult<ChoiceEvidence[]>>;
   noul(questions: readonly NoulQuestion[], options: JevCallOptions): Promise<JevResult<NoulEvidence[]>>;
+}
+
+/** One event per physical HTTP boundary; headers and bearer credentials are never included. */
+export type JevDebugEvent =
+  | { phase: "req"; attemptId: string; decisionId: string; providerId: string; model: string; url: string; body: string }
+  | { phase: "resp"; attemptId: string; decisionId: string; providerId: string; model: string; url: string; httpStatus?: number; durationMs: number; status: JevAttemptStatus; body?: unknown };
+
+/** Strip URL credentials and query strings, and redact the configured bearer key in visible fields. */
+function debugUrl(url: string, key: string | undefined): string {
+  try {
+    const parsed = new URL(url);
+    parsed.username = "";
+    parsed.password = "";
+    parsed.search = "";
+    parsed.hash = "";
+    return key ? parsed.toString().replaceAll(key, "[REDACTED]") : parsed.toString();
+  } catch {
+    return "[invalid URL]";
+  }
+}
+
+function debugBody(value: string, key: string | undefined): string {
+  return key ? value.replaceAll(key, "[REDACTED]") : value;
+}
+
+function debugResponse(raw: unknown, key: string | undefined): unknown {
+  try {
+    return key ? JSON.parse(debugBody(JSON.stringify(raw), key)) : structuredClone(raw);
+  } catch {
+    return "[unavailable response]";
+  }
 }
 
 class BodyLimit extends Error {}
@@ -104,9 +139,25 @@ function snapshot<T>(value: T): T {
 }
 
 export function createJevClient(options: JevClientOptions): JevClient {
-  const { key, now, newId, onAttempt } = options;
+  const { key, now, newId, onAttempt, onDebug, debugEnabled } = options;
   const profile: Readonly<JevProfile> = snapshot(options.profile);
   const upstreamFetch = options.fetch;
+  const visibleUrl = onDebug ? debugUrl(profile.url, key) : "";
+  const observe = (event: JevDebugEvent) => {
+    try {
+      onDebug?.(event);
+    } catch {
+      // Debug output cannot change the call result.
+    }
+  };
+  const enabled = () => {
+    if (!onDebug) return false;
+    try {
+      return debugEnabled?.() ?? true;
+    } catch {
+      return false;
+    }
+  };
 
   async function send<E>(
     body: string,
@@ -126,6 +177,10 @@ export function createJevClient(options: JevClientOptions): JevClient {
     let status: JevAttemptStatus;
     let httpStatus: number | undefined;
     let outcome: { ok: true; evidence: E[] } | { ok: false; error: JevError };
+    let responseBody: unknown;
+    const tracing = enabled();
+    if (tracing) observe({ phase: "req", attemptId: debugBody(attemptId, key), decisionId: debugBody(call.decisionId, key),
+      providerId: debugBody(profile.id, key), model: debugBody(profile.model, key), url: visibleUrl, body: debugBody(body, key) });
     try {
       const pending = upstreamFetch(profile.url, {
         method: "POST",
@@ -160,6 +215,7 @@ export function createJevClient(options: JevClientOptions): JevClient {
           raw = undefined;
         }
         const parsed = raw === undefined ? null : parse(raw);
+        if (tracing && raw !== undefined) responseBody = debugResponse(raw, key);
         if (parsed?.ok) {
           status = "ok";
           outcome = { ok: true, evidence: parsed.value };
@@ -188,6 +244,10 @@ export function createJevClient(options: JevClientOptions): JevClient {
       requestBytes,
       responseBytes: read.bytes,
     };
+    if (tracing) observe({ phase: "resp", attemptId: debugBody(attemptId, key), decisionId: debugBody(call.decisionId, key),
+      providerId: debugBody(profile.id, key), model: debugBody(profile.model, key), url: visibleUrl,
+      durationMs: attempt.durationMs, status, ...(httpStatus === undefined ? {} : { httpStatus }),
+      ...(responseBody === undefined ? {} : { body: responseBody }) });
     try {
       onAttempt?.({ ...attempt });
     } catch {

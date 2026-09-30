@@ -1,5 +1,5 @@
 /**
- * CLI fixes for the wave 1-4 review (L1, L2, M3) and defect 3, from the real entry points.
+ * T043: CLI fixes for the wave 1-4 review (L1, L2, M3) and T041 defect 3, from the real entry points.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";

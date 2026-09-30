@@ -1,5 +1,5 @@
 /**
- * verification (verifier-owned). Harness copied from ./t105-int-verify.test.ts: real OMP
+ * T105 L7 verification (verifier-owned). Harness copied from ./t105-int-verify.test.ts: real OMP
  * entry (`createExtension`), fake OMP host, fake Jev (injected fetch). No ~/.omp, ~/.pi, network.
  * Tests whose name starts with "DEFECT:" reproduce defects found by the L7 verifier.
  */

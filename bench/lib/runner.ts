@@ -136,7 +136,7 @@ export function outcomeOf(p: ProcResult, result: { status?: string; timedOut?: b
   if (p.timedOut || result?.timedOut || result?.status === "timed_out") return "timeout";
   if (cliCancelled(result)) return "cancelled";
   if (result?.sessionError) return "session_error";
-  // mode off: the CLI reports native_off and writes no run.json; keep that category.
+  // mode off (T039): the CLI reports native_off and writes no run.json; keep that category.
   if (runStatus === null) return result?.status === "native_off" ? "native_off" : "artifacts_missing";
   return runStatus as Outcome;
 }

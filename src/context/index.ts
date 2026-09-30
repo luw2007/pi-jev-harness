@@ -1,7 +1,7 @@
 /**
- * Public context surface (technical §8): Pi ⇄ context message mapping, the
- * session-scoped spill store, and the request-level reducer, decision cache and recall
- *. Names are unique across all modules.
+ * Public context surface (technical §8): Pi ⇄ context message mapping (T024), the
+ * session-scoped spill store (T025), and the request-level reducer, decision cache and recall
+ * (T028). Names are unique across all modules.
  */
 export {
   DEFAULT_RECENT_TURNS,

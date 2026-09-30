@@ -1,5 +1,5 @@
 /**
- * verification of on-mode tool routing, `jev_route`, router feature modes. Real
+ * T041 verification of T037: on-mode tool routing, `jev_route`, router feature modes. Real
  * extension entry on the fake Pi host; Jev is a fake fetch. No real Pi, Jev or model.
  */
 import assert from "node:assert/strict";

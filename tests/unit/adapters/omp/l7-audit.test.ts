@@ -1,5 +1,5 @@
 /**
- * L7 (found on real omp): C11 audit must carry stop and approval decisions, not only
+ * T105 L7 (found on real omp): C11 audit must carry stop and approval decisions, not only
  * jev_plan and effort. Fake OMP host, fake Jev (injected fetch), in-memory audit writer.
  */
 import assert from "node:assert/strict";
@@ -12,7 +12,6 @@ import type { AuditInput } from "../../../../src/telemetry/audit.ts";
 
 function setup(config: Record<string, unknown>) {
   const handlers = new Map<string, OmpHandler[]>();
-  const commandRows = new Map<string, { name: string; source: "extension"; description?: string }>();
   const ctx = {
     hasUI: false,
     cwd: "/tmp",
@@ -29,11 +28,11 @@ function setup(config: Record<string, unknown>) {
   const api = {
     pi: { VERSION: "18.4.1" },
     on: (event: string, handler: OmpHandler) => { handlers.set(event, [...(handlers.get(event) ?? []), handler]); },
-    registerCommand: (name: string, o?: { description?: string }) => { commandRows.set(name, { name, source: "extension", description: o?.description }); },
+    registerCommand: () => {},
     registerTool: () => {},
     getAllTools: () => [{ name: "bash", description: "Run", parameters: { type: "object", properties: {} }, sourceInfo: { source: "builtin" } }],
     getActiveTools: () => ["bash"],
-    getCommands: () => [...commandRows.values()],
+    getCommands: () => [],
     getThinkingLevel: () => undefined,
     setActiveTools: async () => {},
     setModel: () => true,

@@ -26,7 +26,7 @@ export {
   validChoiceQuestions,
   validNoulQuestions,
 } from "./wire.ts";
-export type { JevCallOptions, JevClient, JevClientOptions } from "./client.ts";
+export type { JevCallOptions, JevClient, JevClientOptions, JevDebugEvent } from "./client.ts";
 export { createJevClient } from "./client.ts";
 export type { IdentityPolicy } from "./types.ts";
 export { modelMatches } from "./wire.ts";

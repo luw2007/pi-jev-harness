@@ -1,5 +1,5 @@
 /**
- * C7 request-level context reduction for OMP. Reuses the host-neutral hook of the Pi
+ * C7 request-level context reduction for OMP (T105 L4). Reuses the host-neutral hook of the Pi
  * adapter (`../pi/context.ts`, no Pi import) and the shared reducer/archive (`../../context`):
  * - off (session off or `context.request` off): nothing computed, zero Jev requests.
  * - shadow: reduction runs in the background and is recorded (would-reduce); request unchanged.
@@ -30,7 +30,7 @@ export { RECALL_TOOL, CONTEXT_DISABLED_MESSAGE };
 type Mode = "off" | "shadow" | "on";
 
 export interface OmpContextDeps {
-  /** provider chain / legacy mapping / single-url for the `toolContext` capability. */
+  /** T105 C9: provider chain / legacy mapping / single-url for the `toolContext` capability. */
   jev?: JevAccess;
   config: AdapterConfig;
   settings: OmpContextSettings;

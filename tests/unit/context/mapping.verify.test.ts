@@ -1,4 +1,4 @@
-// verification: edge cases for src/context/mapping.ts beyond the builder tests.
+// T030 verification: edge cases for src/context/mapping.ts beyond the T024 builder tests.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { ContextEvent } from "@earendil-works/pi-coding-agent";

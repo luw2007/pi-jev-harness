@@ -1,5 +1,5 @@
 /**
- * verification of D4 (`src/adapters/pi/workspace.ts`): the task changeset baseline.
+ * T041 verification of T036 D4 (`src/adapters/pi/workspace.ts`): the task changeset baseline.
  * Real git and real temp directories; no Pi, Jev or model.
  */
 import assert from "node:assert/strict";

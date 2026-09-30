@@ -1,4 +1,4 @@
-// verification: edge cases for src/harness/continuation.ts beyond the builder tests.
+// T030 verification: edge cases for src/harness/continuation.ts beyond the T021 builder tests.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {

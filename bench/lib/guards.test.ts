@@ -19,14 +19,12 @@ test("every runnable arm in arms.json is accepted by the product's loadConfig", 
 test("a config the adapter rejects aborts the arm instead of running as off", async () => {
   assert.match((await checkArm({ id: "X", label: "x", config: { mode: "on" } }))!, /rejected by pi-jev loadConfig/);
   assert.match((await checkArm({ id: "X", label: "x", config: { mode: "shadow", bogus: 1 } }))!, /rejected/);
-  assert.match((await checkArm({ id: "X", label: "x", config: { mode: "shadow" }, env: { PI_JEV_X: "blocked/blocked-v4" } }, ["blocked"]))!, /BENCH_DENY_MODELS/);
-  assert.equal(await checkArm({ id: "X", label: "x", config: { mode: "shadow" }, env: { PI_JEV_X: "blocked/blocked-v4" } }, []), null);
+  assert.match((await checkArm({ id: "X", label: "x", config: { mode: "shadow" }, env: { PI_JEV_X: "deepseek/deepseek-v4" } }))!, /deepseek/);
   assert.match((await checkArm({ id: "X", label: "x", config: {}, unsupported: "no" }))!, /not runnable/);
   // The arm's env is validated too: an invalid PI_JEV_RUNS_DIR would make the adapter fall back to off.
   assert.match((await checkArm({ id: "X", label: "x", config: { mode: "shadow" }, env: { PI_JEV_RUNS_DIR: "relative/dir" } }))!, /rejected/);
-  assert.equal(checkModel("prov", "model-5", ["blocked"]), null);
-  assert.notEqual(checkModel("prov", "Blocked-V4", ["blocked"]), null);
-  assert.equal(checkModel("prov", "Blocked-V4", []), null, "no default denylist");
+  assert.equal(checkModel("glm", "glm-5"), null);
+  assert.notEqual(checkModel("prov", "DeepSeek-V4"), null);
 });
 
 test("session logs: tool isError, per-attempt usage, malformed lines tolerated; unknown usage is null", async () => {

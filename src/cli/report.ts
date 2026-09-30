@@ -1,6 +1,6 @@
 /**
  * `pi-jev report`: offline view of one run's products, or of the local telemetry aggregate.
- * A run directory is complete only when `run.json` exists (convention); without it the
+ * A run directory is complete only when `run.json` exists (T013/T015 convention); without it the
  * products are reported incomplete and nothing else is shown. Reads only.
  */
 import { join } from "node:path";
@@ -16,7 +16,7 @@ const VERIFICATION_LABELS: Record<string, string> = { passed: "通过", failed: 
 const CHANGE_LABELS: Record<string, string> = { added: "新增", modified: "修改", deleted: "删除" };
 const COMPLETION_LABELS: Record<string, string> = { passed: "通过", incomplete: "未通过", blocked: "阻塞", unavailable: "不可用", not_assessed: "未进行" };
 
-/** One line for `run.json.completion`; null when the run recorded none. */
+/** One line for `run.json.completion` (T036); null when the run recorded none. */
 export function completionLine(completion: RunJson["completion"]): string | null {
   if (!completion) return null;
   const label = COMPLETION_LABELS[completion.status] ?? completion.status;

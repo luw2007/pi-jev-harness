@@ -1,5 +1,5 @@
 /**
- * Verifier-added properties of the report math. These pass on 07c6c0c and pin the
+ * Verifier-added properties of the report math (T102). These pass on 07c6c0c and pin the
  * non-negotiables from the ticket: raw categories in the denominator, time-to-failure apart,
  * null usage propagation, per-task aggregation, fixed-seed bootstrap, A/A baseline, caveat.
  */

@@ -1,5 +1,5 @@
 /**
- * `jev_plan`, audit + report, effort suggestion. Fake OMP host, fake Jev.
+ * T105 L6: `jev_plan` (C6), audit + report (C11), effort suggestion (C12). Fake OMP host, fake Jev.
  * Plan fixtures are derived from the legacy `jev_route` planner tests
  * (omp-jev-extensions/extensions/jev-harness/capabilities/planning-test.ts).
  */
@@ -50,8 +50,8 @@ function fakeJev(choices: Answers = {}) {
 function fakeHost() {
   const handlers = new Map<string, OmpHandler[]>();
   const tools = new Map<string, OmpToolDefinition>();
-  const commands = new Map<string, { name: string; source: "extension"; description?: string }>();
   const calls: string[] = [];
+  const commandMap = new Map<string, { name: string; source: "extension"; description?: string }>();
   const ctx: OmpContext = {
     model: undefined,
     modelRegistry: { getAvailable: () => [], hasConfiguredAuth: () => true },
@@ -62,8 +62,10 @@ function fakeHost() {
   const api: OmpExtensionAPI = {
     pi: { VERSION: "18.3.5" },
     on: (event, handler) => void handlers.set(event, [...(handlers.get(event) ?? []), handler]),
-    registerCommand: (name, options) => void commands.set(name, { name, source: "extension", description: options?.description }),
-    getCommands: () => [...commands.values()],
+    registerCommand: (name, options) => {
+      commandMap.set(name, { name, source: "extension", description: options?.description });
+    },
+    getCommands: () => [...commandMap.values()],
     registerTool: (tool) => void tools.set(tool.name, tool),
     getAllTools: () => [{ name: "read", description: "Read a file", parameters: { type: "object", properties: {} } }],
     getActiveTools: () => ["read"],

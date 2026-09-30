@@ -4,6 +4,7 @@
  * context/). Unlike Pi, the file may say `mode: "on"` (parser opt-in). Reads only: a damaged file
  * is never rewritten and yields mode off with a reason.
  */
+import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { applyOmpContextOverrides, readLegacyContextFiles } from "./context-settings.ts";
@@ -11,6 +12,12 @@ import { loadConfig as loadPiFormat, type LoadConfigOptions, type LoadedConfig }
 
 export function ompHarnessDir(home: string): string {
   return join(home, ".omp", "agent", "pi-jev-harness");
+}
+
+export function ompProvidersPath(home: string, exists: (path: string) => boolean = existsSync): string {
+  const harnessPath = join(ompHarnessDir(home), "jev-providers.json");
+  if (exists(harnessPath)) return harnessPath;
+  return join(home, ".omp", "agent", "jev-providers.json");
 }
 
 export interface OmpConfigOptions {
@@ -38,6 +45,6 @@ export async function loadOmpConfig(options: OmpConfigOptions = {}): Promise<Loa
     ...(options.readText ? { readText: options.readText } : {}),
     ...(options.telemetryDir ? { telemetryDir: options.telemetryDir } : {}),
   });
-  // legacy OMP_JEV_* / OMP_TELEMETRY_* variables and legacy files (env > config > legacy > default).
+  // T105 L4: legacy OMP_JEV_* / OMP_TELEMETRY_* variables and legacy files (env > config > legacy > default).
   return applyOmpContextOverrides(loaded, env, await readLegacyContextFiles(home, env, options.readLegacyText), { telemetryDirInjected: options.telemetryDir !== undefined });
 }

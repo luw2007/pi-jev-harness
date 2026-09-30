@@ -1,14 +1,16 @@
 # pi-jev-harness 技术方案
 
-状态：首版已实现，实现状态见第 16 节；本文其余内容为技术规格。第 1 至 15 节依据各来源项目的核心入口、函数、协议与调用关系以及 Pi 的随包文档编写；其中的目标文件、接口、命令、阈值策略和阶段验收是设计规格，实际实现与偏差见第 16 节。
+日期：2026-09-27。目标目录：`<repo>`。
 
-**设计决定：模型路由由 [magpie](https://github.com/yetone/magpie) 负责。** harness 不包含模型路由代码：
-- harness 不选择模型或 effort，不做跨模型窗口检查，也不在会话中切换模型。
+状态：首版已实现（2026-09-28），按第 16 节实施状态核对；本文其余内容仍为技术规格。第 1 至 15 节依据四个本地工作副本的核心入口、函数、协议与调用关系，以及本机 Pi 的随包文档编写，编写时未调用真实 Jev/provider，未重跑测试。其中的目标文件、接口、命令、阈值策略和阶段验收是设计规格，实际实现与偏差见第 16 节。
+
+**决策记录（2026-09-28）：模型路由由 magpie 负责。** 用户决定 jev 的模型路由统一改由 magpie（https://github.com/yetone/magpie）负责，删除 harness 中的模型路由代码（`src/router/models.ts`、`window.ts` 及其接线）。具体含义：
+- harness 不再选择模型或 effort，不做跨模型窗口检查，也不在会话中切换模型；`router.models` 配置与 `RouteDecision` 的模型部分随之删除。
 - 模型由用户在 Pi 中选定，常见为 magpie 的模型或路由组（`group/<id>`）；magpie 的路由组决定每次请求由哪个成员模型或账号服务。
-- 工具路由（`src/router/tools.ts`、`jev_route` 的工具建议、on 模式下应用工具集合并让 bash 常驻）和计划校验（`src/router/plan.ts`）在 harness 内。
+- 工具路由（`src/router/tools.ts`、`jev_route` 的工具建议、on 模式下应用工具集合并让 bash 常驻）和计划校验（`src/router/plan.ts`）仍在 harness 内，不受本决定影响。
 - harness 的范围为：工具路由与计划校验、动作评审、证据收集、完成验收、有界续跑、上下文裁剪和运行记录。
 
-第 2 节与第 15 节中 O 的模型路由来源条目只作为历史记录保留。
+下文按此改写；第 2 节与第 15 节中 O 的模型路由来源条目只作为历史记录保留，第 16 节模型路由相关的实施记录改标为“已移除”。
 
 文档分工：本文件是唯一技术方案，维护架构、来源文件与函数、接口契约、配置、实施顺序和技术验证。面向使用者的定位、使用流程、命令体验、状态与产品验收统一维护在 [产品与使用说明](pi-jev-harness-product.md)。两份主文档直接维护在 `docs/`；本方案后续原位更新，不再另建日期化的平行方案。
 
@@ -37,7 +39,7 @@ C 的内核来源为 [tamaratran/fast-jev-compaction](https://github.com/tamarat
 
 H 的部分 contract 来自 typesafe-playground，文件头固定了来源 `6fe5967dc020521a0731682b06c4d8eeeab95ffb`；迁移时保留这些归属信息。O 的 foreman 另有引用 `thruwire/foreman policy.py` 的注释，迁移该策略前补核其来源和许可；未完成前保留其需求描述，独立实现本项目决策表。
 
-首个目标 Pi 包为 `@earendil-works/pi-coding-agent@0.87.1`，Node 要求 `>=22.19.0`。将它作为首个适配与验证目标，不把 OMP 文档中的版本号视作运行认证。[Pi SDK][pi-sdk] [Pi 扩展][pi-extensions]
+本机已安装的 Pi 包为 `@earendil-works/pi-coding-agent@0.87.1`，Node 要求 `>=22.19.0`。将它作为首个适配与验证目标，不把本地 OMP 文档中的版本号视作本轮运行认证。[Pi SDK][pi-sdk] [Pi 扩展][pi-extensions]
 
 并行变化记录：O 新增 `8f4ddff`（provider 角色回退）及 `0f93c80`（model-selector gate）。本方案补读了这些函数及调用点，未验证其运行行为；最后核对的 `all-model-router.ts` SHA-256 为 `7e3eaf789fc65907dde63d4eed9883291b975b306a24ac17a9f9308e177bc3df`。来源仓库的早期 [OMP-first 草案][o-other-plan] 仅作为历史背景，不作为本项目维护入口。当前方案采用 Pi-first，并把真实执行记录与纯评审证据分开；这次文档整理不改变该设计，也不代表已经实施或启用。
 
@@ -77,7 +79,7 @@ flowchart TD
 
 ## 4. 按项目的文件与函数吸收清单
 
-本节的源函数均来自第 2 节固定 revision；“目标”均为新项目拟实现路径。迁移采用依赖闭包和必要测试，不复制整个应用目录。2026-09-28 模型路由交给 magpie 后，只服务于模型路由的条目不再吸收，已从下表删去或改写，并在对应小节末尾列出。
+本节的源函数均来自本轮核对的工作副本；“目标”均为新项目拟实现路径。迁移采用依赖闭包和必要测试，不复制整个应用目录。2026-09-28 模型路由交给 magpie 后，只服务于模型路由的条目不再吸收，已从下表删去或改写，并在对应小节末尾列出。
 
 ### 4.1 R：吸收闭集路由的接口与解释能力
 
@@ -192,7 +194,7 @@ pi-jev-harness/
 2026-09-28 起，模型路由不在 harness 内实现。原本节的模型与 effort 选择流程、model-selector 排序和跨模型窗口检查全部删除，边界如下。
 
 - **harness 不改变模型。** 不调用宿主的模型切换接口，也不因工具路由、评审、续跑或上下文裁剪切换模型或 effort。本次任务的模型就是用户在 Pi 中选定的模型；`pi-jev run --model` 只原样传给 Pi。运行记录可以只读记录实际使用的 provider/model，用于解释结果。
-- **模型路由由 magpie 负责。** magpie（https://github.com/yetone/magpie）是本地网关，默认监听 `127.0.0.1:3425`，对外提供 OpenAI、Anthropic、Gemini 兼容接口，模型写作 `provider/model`。它的路由组 `group/<id>` 把多个模型当作一个选择；`routing=`（smart、order、rotate、usage）决定每次请求由哪个成员模型或账号服务，`stays=` 决定一个会话在同一个 key 或账号上停留多久。
+- **模型路由由 magpie 负责。** magpie（https://github.com/yetone/magpie）是本机网关，默认监听 `127.0.0.1:3425`，对外提供 OpenAI、Anthropic、Gemini 兼容接口，模型写作 `provider/model`。它的路由组 `group/<id>` 把多个模型当作一个选择；`routing=`（smart、order、rotate、usage）决定每次请求由哪个成员模型或账号服务，`stays=` 决定一个会话在同一个 key 或账号上停留多久。
 - **magpie 配置在 harness 之外。** harness 不读取、不写入 magpie 配置，也不改写 Pi 设置中的模型字段；doctor 不检查 magpie。Jev 请求照旧直接发往配置的 Jev 服务，不经过 magpie。
 - **失败归属。** magpie 或其上游不可用时，表现为 Pi 的模型请求失败，按执行失败或阻塞如实报告；harness 不换模型重试。
 
@@ -262,7 +264,7 @@ Pi 扩展与宿主同进程、同 OS 权限，`tool_call` 也只覆盖经过该�
 5. 同一 session 的修改串行或有严格代次校验，取消后不提交缓存/曝光变更。稳定前缀的复用通过实际请求快照检查。
 6. 原生摘要候选必须合入 previousSummary 的保留信息，并按宿主契约处理已有 details/preserveData；不认识的承重元数据无法保全时返回 undefined。
 
-O 的插件审计记录了旧摘要约束遗漏、混合图片丢失、工具集合恢复等反例。这里将它们纳入新项目回归范围，不声称本轮已重新复现或修复。
+现有 [O 审计计划][o-audit] 记录了旧摘要约束遗漏、混合图片丢失、工具集合恢复等反例。这里将它们纳入新项目回归范围，不声称本轮已重新复现或修复。
 
 经济性按当前任务测量。H 的 [context cost model][h-cost] 对其已记录工作负载给出了暂不集成、先 shadow 的决定；不能直接套用到本项目，也不能忽视其中关于 cache 失效的提醒。
 
@@ -324,6 +326,7 @@ OMP 的旧式 `session_stop` 与其他版本 settle 事件分独立适配 profil
 | `pi-jev doctor` | 检查宿主版本、配置、扩展重复、工具注册与凭据是否存在；默认不调用 provider、不打印凭据。 |
 | `pi-jev report <run>` / `replay <receipt>` | 离线展示指标/回放契约；回放不执行历史动作。 |
 | `/jev status` / `/jev mode <mode>` | `mode` 为 `off`、`shadow` 或 `on`；显示各功能状态、fallback 原因和剩余预算，on 只启用已通过对应门槛的功能。 |
+| `/jev debug on|off|status` | Pi 与 OMP 均支持；每个会话默认 `off`。TUI 中每个实际出站 REQ 和 RESP 实时显示独立摘要单行（phase/provider/model/status/耗时），按 Ctrl+O 展开格式化 JSON 请求/响应体；没有 TUI 或 renderer API 时 stderr 仅输出每事件一行摘要。展开内容可能暴露实际出站任务上下文，请仅在适当场合开启。Pi 使用不参与模型上下文的 custom entry；OMP 使用 `content: []`、仅在 details 中保存正文的显示消息，并以 `deliverAs: "aside"` 防止中断运行中的模型 turn。认证信息与密钥均不输出；不开 debug 不输出，也不写入 telemetry。`off` 立即关闭，`status` 查看本会话开关状态。 |
 | `jev_route` | 返回经验证的工具/计划建议，不再给出模型建议；兼容已有工具名，说明并未因此执行任务。 |
 | `jev_acceptance_gate` / `foreman_assess` | 保留轻/重评估入口；输出新 completion/checkpoint 契约。自动 controller 调同一业务函数，避免重复调用。 |
 | `jev_recall` | 新增受控读取工具：按本 session 的产物 handle 恢复被移出的结果。纯读取，不接受任意外部路径或重跑命令。 |
@@ -387,7 +390,7 @@ M2 的完成定义包含正常新建文件和验证，不能只做“提出补�
 
 沿用 H 的 routing / bundle / prepare / decide / review-payload / receipt-binding / evaluation 用例，C 的 cache-identity / sticky / keep-call / oversized-history / spill 用例，以及 O 的 router / autorun / compaction / telemetry 回归。它们作为兼容与基础覆盖；新增宿主动作、真实事件和本轮发现必须有新的有效用例。
 
-修改前先在隔离、无真实凭据、无外部网络、临时写入目录中建立基线，避免测试写入个人审计目录。O 的旧审计记载无凭据基线曾因 route test 的 key 设置顺序失败，不能将补假 key 的旧运行写成当前全绿。
+修改前先在隔离、无真实凭据、无外部网络、临时写入目录中建立基线，避免测试写入个人审计目录。O 的旧审计记载无凭据基线曾因 route test 的 key 设置顺序失败，不能将补假 key 的旧运行写成当前全绿。本轮未执行这些测试。
 
 未来修改 O 集成时仍须先完整运行 `bun run extensions/jev-compaction/jev-compaction-test.ts`，再运行完整 `bun run test`。新项目对外统一提供 `pnpm test`、`pnpm typecheck`、`pnpm test:host`、`pnpm bench:offline`；真实 provider 试验独立入口、显式预算，不混入普通测试。
 
@@ -417,7 +420,7 @@ M2 的完成定义包含正常新建文件和验证，不能只做“提出补�
 
 ## 15. 源码与文档索引
 
-以下为编写本方案时读取的具体文件；行号指向相关定义附近。O 的固定 revision `0f93c80` 未公开发布，其链接只指向仓库根目录，文件名与行号见链接标题。O 的 all-model-router、model-selector 条目及 R 的模型选择部分，2026-09-28 起只作历史记录，不再吸收。O 的 all-model-router 行号对应最后核对的 `0f93c80` 快照；后续工作副本变化可能使行号移动，以函数名和来源 commit 为准。
+以下为本轮读取的具体文件；行号指向相关定义附近。O 的 all-model-router、model-selector 条目及 R 的模型选择部分，2026-09-28 起只作历史记录，不再吸收。O 的 all-model-router 行号对应最后核对的 `0f93c80` 快照；后续工作副本变化可能使行号移动，以函数名和来源 commit 为准。
 
 [r-router]: https://github.com/TypeSafeAI/typesafe-router/blob/4c6855ccfc92ff0e40a71661685c9ead327a3715/lib/jevRouter.ts#L80
 [r-types]: https://github.com/TypeSafeAI/typesafe-router/blob/4c6855ccfc92ff0e40a71661685c9ead327a3715/types/router.ts#L39
@@ -451,6 +454,8 @@ M2 的完成定义包含正常新建文件和验证，不能只做“提出补�
 [o-report]: https://github.com/luw2007/omp-jev-extensions "extensions/telemetry/report.js @ 0f93c80 (unpublished)"
 [o-compaction]: https://github.com/luw2007/omp-jev-extensions "extensions/jev-compaction/hook.ts @ 0f93c80 (unpublished)"
 [o-migration]: https://github.com/luw2007/omp-jev-extensions "MIGRATION.md @ 0f93c80 (unpublished)"
+[o-audit]: https://github.com/luw2007/omp-jev-extensions "docs/plans/omp-jev-extensions-20260926-plugin-audit-plan.md @ 0f93c80 (unpublished)"
+[o-other-plan]: https://github.com/luw2007/omp-jev-extensions "docs/plans/pi-jev-harness-20260927-integration-design.md @ 0f93c80 (unpublished)"
 [c-asker]: https://github.com/jerryfane/omp-jev-compaction/blob/e21ab3273542a07984c4f2cfc4b3e746dc95930c/src/asker.ts#L40
 [c-compact]: https://github.com/jerryfane/omp-jev-compaction/blob/e21ab3273542a07984c4f2cfc4b3e746dc95930c/src/vendor/fast-jev/compact.ts#L277
 [c-state]: https://github.com/jerryfane/omp-jev-compaction/blob/e21ab3273542a07984c4f2cfc4b3e746dc95930c/src/vendor/fast-jev/state.ts#L231
@@ -466,28 +471,32 @@ M2 的完成定义包含正常新建文件和验证，不能只做“提出补�
 [official-noul]: https://docs.typesafe.ai/primitives/noul
 [magpie-readme]: https://github.com/yetone/magpie#providers-and-the-gateway
 
-## 16. Status
+## 16. 实施状态（2026-09-28）
 
-本节记录首版的实际实现，第 1 至 15 节的规格不因此改变。产品侧逐项状态见 [产品与使用说明](pi-jev-harness-product.md) 第 15 节。模型路由不在 harness 内（由 magpie 负责）。
+本节记录截至 master `fb2ffb0` 的实际实现，第 1 至 15 节的规格不因此改变。证据为各阶段宿主验证与离线测试回执。T040 是真实 Pi 0.87.1 上的最终宿主验证（被验代码 `de06f3a`）；T041 与 REVIEW-20260928-wave1-4 是假宿主验证与代码审查；T043、T044、T045 是其后的缺陷修复。修复后尚未在真实 Pi 上复验的行为标为“已实现，待宿主复验”。宿主复验 T046（被验代码 `fb2ffb0`）已按其结论更新下表；T046 发现的唯一缺陷 F1（取消时 CLI 进度流写“模型请求失败”）已在 T049 修复，待复验。产品侧逐项验收见 [产品与使用说明](pi-jev-harness-product.md) 第 15 节。
+
+2026-09-28 模型路由交给 magpie 后，`src/router/models.ts`、`window.ts` 及其接线随之删除，下表中模型路由相关的内容改为“已移除（路由由 magpie 负责）”；工具路由与计划校验不变。
+
+状态取值：已实现并经真实宿主验证 / 已实现，待宿主复验 / 部分实现 / 未实现 / 已移除（路由由 magpie 负责）。M0 不涉及宿主，记为“已完成”。
 
 ### 16.1 阶段状态
 
-| 阶段 | Implemented | Verified | Limitations |
+| 阶段 | 状态 | 证据 | 说明 |
 | --- | --- | --- | --- |
-| M0：基线冻结 | 是 | 不涉及宿主 | `third_party/sources.json` 记录 R、H、O、C、fast-jev 与 typesafe-playground；`vendor/` 含 jev-harness 与 fast-jev。包管理器 `pnpm@11.5.2`，Node 下限 22.19.0。 |
-| M1：工具路由与观测 | 是 | 真实 Pi | shadow 不改变行为、off 零 Jev 请求；shadow 下工具集合不含 jev_recall。 |
-| M2：单执行者闭环 | 是 | 真实 Pi | 读取、修改、新建、检查四类任务可从 Pi 与 CLI 完成；on 下 create 强制评审阻止、shadow 不拦截。 |
-| M3：验证与有界续跑 | 是 | 真实 Pi | 完成验收、各结束状态与续跑上限 2 已验证；取消时 CLI 进度流的修复尚未在真实宿主复验。 |
-| M4：可恢复 context | 是 | 真实 Pi（RPC 入口） | 先存档再裁剪，recall 与原文逐 byte 相同，Jev 不可用或存储不可写时保留原文。图片与 `pi -p` 未验证；摘要替换未实现。 |
-| M5：端到端试验与发布 | 部分 | 仅离线冒烟 | `bench/` 与 `pnpm bench:offline` 已有；第 13.2 节成对试验未运行，未宣称提效。 |
-| OMP 适配 | 部分 | 离线宿主测试 | off/shadow，最低支持 OMP 18.3.5；低于最低版本或版本不可读时强制 off。on 仍只观察；真实 provider 版（`PI_JEV_OMP_LIVE=1`）未运行。 |
-| 多执行者 | 否 | — | `src/router/plan.ts` 只做计划校验与闭集选择，未导出、未接入；没有 `harness/dispatch.ts`。 |
+| M0：基线冻结 | 已完成 | T003、T004、T004b、T023、T029、T033 | `third_party/sources.json` 记录 R、H、O、C 与 fast-jev；`vendor/` 含 jev-harness 与 fast-jev；`baseline/` 记录来源测试基线。包管理器实际为 `pnpm@11.5.2`，Node 下限 22.19.0。 |
+| M1：路由与观测 | 已实现并经真实宿主验证 | T005 至 T009、T040 §3.2、T046 §3.1、§3.3 | shadow 不改变行为、off 零 Jev 请求已在真实 Pi 验证。shadow 下工具集合不含 jev_recall 已在 T046 复验。模型路由已移除（路由由 magpie 负责）。 |
+| M2：单执行者闭环 | 已实现并经真实宿主验证 | T011 至 T017、T026、T031、T040 §3.3、T046 §3.3 | 读取、修改、新建、检查四类任务从 Pi 与 CLI 两个入口完成；on 下 create 强制评审阻止、shadow 不拦截均已验证。 |
+| M3：验证与有界续跑 | 已实现并经真实宿主验证 | T020 至 T022、T027、T036、T040 §3.5、T046 §3.2、§3.3、§5、T049 | 完成验收、各结束状态与续跑上限 2 已在真实 Pi 验证。E2、E3、E4 已在 T046 复验，不再出现；T046 未触发续跑，“续跑有界”结论为基本满足。取消时进度流误写（F1）已在 T049 修复，待复验。 |
+| M4：可恢复 context | 已实现并经真实宿主验证 | T023 至 T025、T028、T032、T038、T041、T044、T046 §3.5 | 请求级 on 裁剪与 `jev_recall` 已在真实 Pi 的 RPC 入口验证：先存档再裁剪，recall 与原文逐字节相同，Jev 不可用或存储不可写时保留原文。图片与 `pi -p` 未验证。摘要替换未实现，配置只接受 off。 |
+| M5：端到端试验与发布 | 部分实现 | T102 | `bench/` 成对试验工具与 `pnpm bench:offline` 已有，只做过离线冒烟。第 13.2 节成对试验未运行，未按实测结果放行任何能力，未打包发布。 |
+| OMP 适配 | 部分实现 | T103、T103b | off/shadow，最低支持 OMP 18.3.5；低于最低版本或版本不可读时只注册 session_start 并强制 off。on 仍只观察。离线宿主测试通过，真实 provider 版（`PI_JEV_OMP_LIVE=1`）未运行。 |
+| 后续：多执行者 | 未实现 | T034 | `src/router/plan.ts` 只做计划校验与闭集选择，未从 `router` 子入口导出，也未接入适配器；没有 `harness/dispatch.ts`。 |
 
-公共命令：`pnpm typecheck`、`pnpm test`、`pnpm test:host`、`pnpm bench:offline`。
+第 13.1 节要求的公共命令均已存在：`pnpm typecheck`、`pnpm test`、`pnpm test:host`、`pnpm bench:offline`。在 `fb2ffb0` 上 `pnpm typecheck` 通过；`pnpm test` 共 815 个用例，1 个在全量运行时失败，单独运行该文件三次均通过，见 T047 回执。
 
 ### 16.2 实际源码结构
 
-由 `find src -type f | sort` 生成（节选）：
+由 `find src -type f | sort` 在 `fb2ffb0` 上生成，已删去随模型路由移除的 `src/router/models.ts` 与 `window.ts`：
 
 ```text
 src/adapters/omp/config.ts
@@ -552,7 +561,7 @@ src/telemetry/writer.ts
 
 与第 5 节规划的差异：
 
-- **`src/adapters/shared/`**：新增宿主无关的配置解析、凭据检测和工具选择器（模型选择器随模型路由移除），Pi 与 OMP 两个适配器共用。`src/adapters/pi/config.ts` 只是转出。
+- **`src/adapters/shared/`**：新增宿主无关的配置解析、凭据检测和工具选择器（T042；模型选择器随模型路由移除），Pi 与 OMP 两个适配器共用。`src/adapters/pi/config.ts` 只是转出。
 - **`src/adapters/pi/`**：除规划的 index、host、tools 外，新增 `harness.ts`（动作信封、评审、运行产物）、`lifecycle.ts`（完成验收与续跑的生命周期）、`context.ts`（请求级裁剪钩子与 jev_recall）、`workspace.ts`（工作区改动集）。
 - **`src/adapters/omp/`**：新增 config、profile、shared、types。
 - **`src/cli/`**：CLI 拆为目录，`src/cli.ts` 只是入口；另有 `pi-session.ts`（启动 Pi 会话）与 `export.ts`（分享导出）。
@@ -560,42 +569,42 @@ src/telemetry/writer.ts
 - **`src/context/`**：新增 `index.ts` 与 `recall.ts`。
 - **`src/router/plan.ts`**：存在，但未导出、未接入。
 - **`src/telemetry/`**：新增 `types.ts` 与 `index.ts`。
-- **测试与 fixtures**：只有 `tests/unit/` 与 `tests/host/`，没有 `tests/integration/`、`tests/regression/` 和顶层 `fixtures/`。离线任务 fixtures 放在 `bench/fixtures/`。
+- **测试与 fixtures**：只有 `tests/unit/` 与 `tests/host/`，没有 `tests/integration/`、`tests/regression/` 和顶层 `fixtures/`。离线任务 fixtures 放在 `bench/fixtures/`。另有顶层 `baseline/` 与 `experiments/`。
 
 ### 16.3 已知限制与待决事项
 
-按是否需要决定分列。
+以下各项汇总自回执的“风险与存疑”节，按是否需要决定分列。
 
 **待决（需要产品或设计决定）**
 
 - **配置文件拒绝 `mode: on`**：on 只能在会话中用 `/jev mode on` 打开，也没有显式的持久化命令。
-- **shadow 也写上下文存档**：为了切到 on 后能恢复，shadow 会把存档写到 `context.storeDir`，受 `maxSessionBytes` 限制。若要求 shadow 零写盘，需要把缓存与存档分开。
-- **每个新提示词都递增任务版本**：新任务不复用旧的裁剪决定，会重新询问 Jev 并在第一次请求时改变前缀。若成本不可接受，可改为只在目标变化时递增。
-- **凭据检测的纯字母阈值为 16**：冒号形式下 12 到 15 个字母的纯字母密钥仍会漏检，这是为放过 `required`、`placeholder` 等词的取舍。另外 `MAX_TOKEN=4096` 这类文本会被误判为凭据，出站时扣下任务意图。
-- **shadow 臂的 run.json 为 incomplete，而验收命令已通过**：bench 如实分列，是否算“错误未完成”待定。
-- **off 且 provider 报错时 `pi-jev run` 退出 1**：规格原写退出 2，现有测试断言 1。
-- **续跑会推动“补验证”**：即使用户说了不要运行命令。宿主验证由假 Jev 驱动，真实 Jev 的判断未测。
-- **`jev_route` 只在意图与当前任务相同时复用**：同一非任务意图调用两次会发两次请求。
+- **shadow 也写上下文存档**：为了切到 on 后能恢复，shadow 会把存档写到 `context.storeDir`，受 `maxSessionBytes` 限制。若要求 shadow 零写盘，需要把缓存与存档分开（T038）。
+- **每个新提示词都递增任务版本**：新任务不复用旧的裁剪决定，会重新询问 Jev 并在第一次请求时改变前缀。若成本不可接受，可改为只在目标变化时递增（T044）。
+- **凭据检测的纯字母阈值为 16**：冒号形式下 12 到 15 个字母的纯字母密钥仍会漏检，这是为放过 `required`、`placeholder` 等词的取舍。另外 `MAX_TOKEN=4096` 这类文本会被误判为凭据，出站时扣下任务意图（T043）。
+- **shadow 臂的 run.json 为 incomplete，而验收命令已通过**：bench 如实分列，是否算“错误未完成”待定（T102）。
+- **off 且 provider 报错时 `pi-jev run` 退出 1**：工单原写退出 2，现有测试断言 1（T039、T041）。
+- **续跑会推动“补验证”**：即使用户说了不要运行命令。T040 由假 Jev 驱动，真实 Jev 的判断未测。
+- **`jev_route` 只在意图与当前任务相同时复用**：同一非任务意图调用两次会发两次请求（T041）。
 
 **已知限制（当前按此运行）**
 
 - **旧配置中的 `router.models` 键被忽略**：只在状态中提示，不视为无效配置；模型路由由 magpie 负责。
 - **续跑上限最多 2**：`harness.continuation.max` 只接受 0 到 2。
-- **续跑的两项前置条件恒为假**：Pi 不向扩展暴露审批队列和后台任务，`pendingApproval` 与 `runningBackgroundTasks` 固定为 false 与 0，不会阻止续跑。
-- **遥测 runId 与自定义运行编号**：遥测 schema 只接受 `run_<uuid>`。自定义 `PI_JEV_RUN_ID` 以及同一会话后续任务的 `<id>-<n>` 不符合，这些任务的遥测仍记在会话 id 下。
-- **路由结果晚于任务收尾**：超过 `budget.waitMs` 的在途路由请求，在 run.json 中只记 observed，没有细节。
-- **doctor 用合成的 `session_start`**：只提供 `sessionManager.getBranch`；以后若会话启动读取更多上下文，注册检查会报 fail。
-- **取消判定的文本兜底**：stopReason 为 error 且错误文本以已知中止文本开头时记为用户取消。若 provider 把上游失败写成 “Request aborted”，会被误判为取消。
-- **Ctrl-C 最多等 10 秒**：会话在此期间未结束时报告 artifacts_missing，退出 1。
-- **bash 按名字识别**：Pi 0.87.1 的工具信息没有“这是 shell”的标记，常驻执行工具只认内置 `bash`。
-- **replay 实际只能给出 cannot_verify**：没有 `--trusted` 时无法核出一致，CLI 也不产出可信文件。
-- **完成验收的遥测行不带 source**：无法区分“未授权不发”和“Jev 失败”。
-- **`pi -p` 打印模式下 `/jev` 命令没有可见输出**。
-- **配置写 `mode: "on"` 在 `pi -p` 下静默失效**：该配置无效，扩展强制 off，stderr 没有提示；只有 doctor 显示“配置：损坏”。
-- **on 路由下经 bash 写文件不受强制评审**：这类改动会计入改动集，但 `harness.enforce` 只覆盖 edit、create、overwrite 信封，不评审 bash 写入。
-- **Jev 故障后的新任务请求变大**：新任务重新询问 Jev；Jev 不可用时，此前已存档的输出全部按原文发出。实测单次请求从 11 KB 涨到 137–201 KB。
-- **连按两次 Ctrl-C 不留 run 目录**：第二次中断立即退出，这是设计选择。
-- **工作区改动集的边界**：git 忽略的文件被 bash 改写时不计入；walk 模式下大小与 mtime 都不变的改写不重算哈希；配置在工作区内的上下文存档目录不在排除列表中。
-- **宿主测试只在 provider-b 上通过**：宿主测试的默认模型在验证期间一直 503，默认模型未复验。
-- **OMP**：18.3.5 是最低兼容版本；更高的稳定语义版本沿用该 profile，低于最低版本或版本不可读时自动关闭全部能力；telemetry 用 `adapter:no_profile` 记录无 profile。
-- **bench**：git 任务源未用真实 git 任务跑过；工具失败与用量依赖 Pi 会话日志格式；没有盲评 rubric。
+- **续跑的两项前置条件恒为假**：Pi 不向扩展暴露审批队列和后台任务，`pendingApproval` 与 `runningBackgroundTasks` 固定为 false 与 0，不会阻止续跑（REVIEW-20260928-wave1-4）。
+- **遥测 runId 与自定义运行编号**：遥测 schema 只接受 `run_<uuid>`。自定义 `PI_JEV_RUN_ID` 以及同一会话后续任务的 `<id>-<n>` 不符合，这些任务的遥测仍记在会话 id 下（T045）。
+- **路由结果晚于任务收尾**：超过 `budget.waitMs` 的在途路由请求，在 run.json 中只记 observed，没有细节（T045）。
+- **doctor 用合成的 `session_start`**：只提供 `sessionManager.getBranch`；以后若会话启动读取更多上下文，注册检查会报 fail（T043）。
+- **取消判定的文本兜底**：stopReason 为 error 且错误文本以已知中止文本开头时记为用户取消。若 provider 把上游失败写成 “Request aborted”，会被误判为取消（T045）。
+- **Ctrl-C 最多等 10 秒**：会话在此期间未结束时报告 artifacts_missing，退出 1（T045）。
+- **bash 按名字识别**：Pi 0.87.1 的工具信息没有“这是 shell”的标记，常驻执行工具只认内置 `bash`（T045）。
+- **replay 实际只能给出 cannot_verify**：没有 `--trusted` 时无法核出一致，CLI 也不产出可信文件（T040）。
+- **完成验收的遥测行不带 source**：无法区分“未授权不发”和“Jev 失败”（T040）。
+- **`pi -p` 打印模式下 `/jev` 命令没有可见输出**（T040）。
+- **配置写 `mode: "on"` 在 `pi -p` 下静默失效**：该配置无效，扩展强制 off，stderr 没有提示；只有 doctor 显示“配置：损坏”（T046）。
+- **on 路由下经 bash 写文件不受强制评审**：这类改动会计入改动集，但 `harness.enforce` 只覆盖 edit、create、overwrite 信封，不评审 bash 写入（T046）。
+- **Jev 故障后的新任务请求变大**：新任务重新询问 Jev；Jev 不可用时，此前已存档的输出全部按原文发出。T046 实测单次请求从 11 KB 涨到 137–201 KB（T046）。
+- **连按两次 Ctrl-C 不留 run 目录**：第二次中断立即退出，这是设计选择（T045、T046）。
+- **工作区改动集的边界**：git 忽略的文件被 bash 改写时不计入；walk 模式下大小与 mtime 都不变的改写不重算哈希；配置在工作区内的上下文存档目录不在排除列表中（T041）。
+- **宿主测试只在 traex 上通过**：宿主测试的默认 gcloud 模型在 T040 期间一直 503，默认模型未复验（T040）。
+- **OMP**：18.3.5 是最低兼容版本；更高的稳定语义版本沿用该 profile，低于最低版本或版本不可读时自动关闭全部能力；telemetry 用 `adapter:no_profile` 记录无 profile（T103）。
+- **bench**：git 任务源未用真实 git 任务跑过；工具失败与用量依赖 Pi 会话日志格式；没有盲评 rubric（T102）。

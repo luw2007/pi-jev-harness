@@ -1,5 +1,5 @@
 /**
- * verification (verifier-owned): PROBABILITY_SUM_TOLERANCE 0.01 + renormalisation.
+ * T105 L7 verification (verifier-owned): PROBABILITY_SUM_TOLERANCE 0.01 + renormalisation.
  * Tests whose name starts with "DEFECT:" reproduce defects found by the L7 verifier.
  */
 import assert from "node:assert/strict";

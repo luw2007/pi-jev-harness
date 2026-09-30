@@ -1,5 +1,5 @@
 /**
- * Verifier-added regression tests for earlier bench defects. Each test states the
+ * Verifier-added regression tests for defects found in T102 (07c6c0c). Each test states the
  * expected behavior and FAILS on 07c6c0c; the builder fixes production code until they pass.
  */
 import assert from "node:assert/strict";

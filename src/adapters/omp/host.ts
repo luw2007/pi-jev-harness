@@ -4,24 +4,24 @@
  * shadow snapshots the host tools at `before_agent_start`, runs the tool router asynchronously
  * against Jev and records the result in telemetry. It never calls setActiveTools / setModel /
  * setThinkingLevel, never edits the prompt, and every handler returns undefined without awaiting
- * Jev. off sends no Jev request. Model selection is not routed here (the gateway owns it).
+ * Jev. off sends no Jev request. Model selection is not routed here (T104: the gateway owns it).
  *
  * Events come only from the selected profile (`./profile.ts`). With no profile only the `/jev`
  * command and `session_start` are registered; the latter only loads config and records one
  * `adapter:no_profile` diagnostic per session. The adapter stays off.
  *
- * foundation (extension points for L2–L6):
+ * T105 L1 foundation (extension points for L2–L6):
  * - Host access goes through the host port (`OmpHost.port`, `./port.ts`, `../core/port.ts`).
- * - Legacy `@omp-jev/harness` coexistence (`./legacy.ts`): a conflict found in the plugins lock
- *   suppresses shared names at load time; a runtime conflict at `session_start` forces off.
- *   If registry getters are unavailable during load, shared registration waits for that check.
- *   Both paths record `adapter:legacy_conflict` and show in `/jev status`.
+ * - Legacy `@omp-jev/harness` coexistence (`./legacy.ts`): a conflict found at load time (plugins
+ *   lock) registers neither `/jev` nor any legacy-named tool; one found at `session_start` forces
+ *   the session off. Both record `adapter:legacy_conflict` and show in `/jev status`. Lanes that
+ *   register tools do it in `register()` and only when `canRegister(name)` is true.
  * - Config `mode: "on"` parses (OMP opt-in) and is honored; each capability acts only when its
- *   own switch is on (`context.request`, `context.compaction`, `context.proactive.mode`).
+ *   own switch is on (T105 L4: `context.request`, `context.compaction`, `context.proactive.mode`).
  * - Config `mode: "on"` (OMP opt-in) is effective: only capabilities whose own switch is on change
- *   behavior (completion acceptance + bounded continuation at `session_stop`, see
+ *   behavior (T105 L3: completion acceptance + bounded continuation at `session_stop`, see
  *   `./stop.ts`); tool routing still only observes here.
- * - `session_stop` / `agent_end` → `./stop.ts`; tools → `./tools-register.ts`; `/jev` →
+ * - T105 L3: `session_stop` / `agent_end` → `./stop.ts`; tools → `./tools-register.ts`; `/jev` →
  *   `./commands.ts`; legacy config files → `./legacy-config.ts` (read-only).
  */
 import { randomUUID } from "node:crypto";
@@ -34,14 +34,14 @@ import {
 } from "../../router/index.ts";
 import { createTelemetryWriter, type TelemetryInput, type TelemetryOutcome, type TelemetrySource, type TelemetryWriter } from "../../telemetry/index.ts";
 import { containsCredential, createJevToolRouter, readJevKey, truncateIntent, type LoadedConfig } from "./shared.ts";
-import { loadOmpConfig } from "./config.ts";
-import type { HostPort } from "../core/port.ts";
+import { loadOmpConfig, ompProvidersPath } from "./config.ts";
+import type { HostPort, HostToolInfo } from "../core/port.ts";
 import { LEGACY_COMMAND, LEGACY_TOOL, LEGACY_TOOLS, lockConflict, ompPluginsLockPath, OWN_COMMAND_DESCRIPTION, readLockFile, runtimeConflict } from "./legacy.ts";
 import { createOmpGates } from "./gates.ts";
 import { createOmpPort, type OmpPort } from "./port.ts";
 import { detectProfile, type OmpProfile } from "./profile.ts";
 import { hostToolsFromOmp } from "./tools.ts";
-import type { OmpAgentEndEvent, OmpBeforeAgentStartEvent, OmpContext, OmpContextEvent, OmpExtensionAPI, OmpSessionBeforeCompactEvent, OmpSessionStopEvent, OmpToolCallEvent, OmpToolInfo } from "./types.ts";
+import type { OmpAgentEndEvent, OmpBeforeAgentStartEvent, OmpContext, OmpContextEvent, OmpExtensionAPI, OmpSessionBeforeCompactEvent, OmpSessionStopEvent, OmpToolCallEvent } from "./types.ts";
 import { createOmpCompaction, type OmpCompaction } from "./compaction.ts";
 import { createOmpContextReducer, recallToolDefinition, RECALL_TOOL, type OmpContextReducer } from "./context.ts";
 import { ompContextSettings, ompTelemetryEnabled, ompTelemetryMaxBytes } from "./context-settings.ts";
@@ -51,6 +51,7 @@ import { effectiveEffort, suggestEffort, type EffortLevel } from "./effort.ts";
 import { jevCompletions, runJevCommand } from "./commands.ts";
 import { legacyConfigDir, loadLegacyConfig, type LegacyConfig } from "./legacy-config.ts";
 import { createJevAccess, type JevAccess } from "../shared/jev-access.ts";
+import { formatJevDebugCompact, jevDebugDetails, renderJevDebug, type JevDebugDetails } from "../shared/jev-debug.ts";
 import { join } from "node:path";
 import { assessOffResult, createOmpStop, type OmpStop } from "./stop.ts";
 import { routeOffResult } from "./route.ts";
@@ -71,16 +72,18 @@ export interface OmpHostDeps {
    * Default reads `$HOME/.omp/...` from the injected env (no HOME → no lock check).
    */
   readPluginsLock: () => string | undefined;
-  /** Content-free audit writer; default `<harnessDir>/audit` next to telemetry. */
+  /** Content-free audit writer (T105 C11); default `<harnessDir>/audit` next to telemetry. */
   createAudit: (telemetryDir: string) => AuditWriter;
   /** Root whose tools count as this adapter's own (legacy tool check); default this package. */
   packageRoot?: string;
-  /** Legacy `@omp-jev/harness` config files, read-only; default `$HOME/.omp/agent`. */
+  /** Legacy `@omp-jev/harness` config files, read-only (T105 C10); default `$HOME/.omp/agent`. */
   loadLegacyConfig: () => Promise<LegacyConfig>;
-  /** Legacy `jev-providers.json`, read-only; default `$HOME/.omp/agent/jev-providers.json`. */
+  /** Provider config path: prefer the harness directory, then the legacy OMP location. */
   legacyProvidersPath?: string;
   /** Reads the legacy providers file and chain key files; default `readFileSync(path, "utf8")`. */
   readFile?: (path: string) => string;
+  /** Raw debug output; defaults to stderr and is enabled only by /jev debug on. */
+  writeDebug?: (text: string) => void;
 }
 
 export function defaultOmpHostDeps(overrides: Partial<OmpHostDeps> = {}): OmpHostDeps {
@@ -101,7 +104,8 @@ export function defaultOmpHostDeps(overrides: Partial<OmpHostDeps> = {}): OmpHos
     detectProfile,
     readPluginsLock: readLockFile(env.HOME ? ompPluginsLockPath(env.HOME, env) : undefined),
     loadLegacyConfig: async () => (env.HOME ? loadLegacyConfig(legacyConfigDir(env.HOME)) : { dir: "" }),
-    ...(env.HOME ? { legacyProvidersPath: join(legacyConfigDir(env.HOME), "jev-providers.json") } : {}),
+    ...(env.HOME ? { legacyProvidersPath: ompProvidersPath(env.HOME) } : {}),
+    writeDebug: (text) => process.stderr.write(`${text}\n`),
     ...overrides,
   };
 }
@@ -117,6 +121,7 @@ interface SessionState {
   runId: string;
   loaded: LoadedConfig;
   mode: OmpMode;
+  debug: boolean;
   telemetry: TelemetryWriter;
   audit: AuditWriter;
   pendingRecords: Set<Promise<boolean>>;
@@ -128,19 +133,19 @@ interface SessionState {
   /** Legacy plugin conflict: forces the session off. */
   legacyConflict?: string;
   closed: boolean;
-  /** C7 request reduction + jev_recall, C8 compaction and proactive compaction. */
+  /** C7 request reduction + jev_recall, C8 compaction and proactive compaction (T105 L4). */
   context: OmpContextReducer;
   compaction: OmpCompaction;
-  /** acceptance checkpoint, bounded continuation, assessment and route tools. */
+  /** T105 L3: acceptance checkpoint, bounded continuation, assessment and route tools. */
   stop: OmpStop;
   legacy: LegacyConfig;
-  /** provider chain / legacy mapping / single-url, and the credential-scan secrets. */
+  /** T105 C9: provider chain / legacy mapping / single-url, and the credential-scan secrets. */
   jev: JevAccess;
   /** Units spent from the per-task counter (see ./budget.ts); reset at each new task. */
   taskUnits: number;
   /** Units spent by shadow observations (same limit, separate counter; ./budget.ts rule 1). */
   shadowUnits: number;
-  /** provider-chain fallback bookkeeping for status and the one-time notice. */
+  /** T106: provider-chain fallback bookkeeping for status and the one-time notice. */
   chain: ChainNotice;
   /** Latest handler ctx, for chain notices; `child` suppresses them. */
   ui?: { ctx: OmpContext; child: boolean };
@@ -188,11 +193,11 @@ export interface OmpHost {
   shutdown(): Promise<void>;
   settled(): Promise<void>;
   readonly profile: OmpProfile;
-  /** Host port for lanes that need tool/session access. */
+  /** Host port for lanes that need tool/session access (T105). */
   readonly port: HostPort<OmpContext>;
   /** False for a legacy-shared name while a load-time legacy conflict is known. */
   canRegister(name: string): boolean;
-  /** Current session's audit writer, for stop / autorun / approval lanes. */
+  /** Current session's audit writer (T105 C11), for stop / autorun / approval lanes. */
   audit(): AuditWriter | undefined;
 }
 
@@ -203,8 +208,6 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
   let loadConflict: string | undefined;
   let lockReason: string | undefined;
   let ownsCommand = false;
-  let sharedRegistered = false;
-  let deferSharedRegistration = false;
   let session: SessionState | undefined;
   let duplicateLoads = 0;
   let duplicatesRecorded = 0;
@@ -222,7 +225,7 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
     void pending.finally(() => state.pendingRecords.delete(pending));
   };
 
-  // tool apply, enforce, approval + steer.
+  // T105 L2 (C1–C3): tool apply, enforce, approval + steer.
   const gates = createOmpGates(port, api, {
     env: deps.env, fetch: deps.fetch, now: deps.now, newId: deps.newId,
     record: (event) => { if (session) record(session, event); },
@@ -259,7 +262,7 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
     }
   };
 
-  /** telemetry for every chain step; one notice per failing provider until it answers again. */
+  /** T106: telemetry for every chain step; one notice per failing provider until it answers again. */
   function onChainAttempt(state: SessionState, attempt: JevChainAttempt) {
     record(state, { runId: state.runId, decisionId: attempt.decisionId, kind: "jev_attempt", outcome: chainOutcome(attempt), durationMs: attempt.durationMs,
       chain: { providerId: attempt.providerId, outcome: attempt.outcome, fellBack: attempt.fellBack, ...(attempt.httpStatus !== undefined ? { httpStatus: attempt.httpStatus } : {}) } });
@@ -303,59 +306,40 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
     }
   };
 
-  /** Runtime check at session start; host runtime actions are unavailable during load. */
+  /** Runtime check at session start; an unavailable host registry cannot prove ownership, so fail closed. */
   function sessionConflict(): string | undefined {
     if (lockReason) return lockReason;
-    let tools: OmpToolInfo[] | undefined;
+    let tools: readonly HostToolInfo[] | undefined;
     try {
       tools = port.getAllTools();
     } catch {
       tools = undefined;
     }
     const commands = commandRows();
-    if (deferSharedRegistration && (tools === undefined || commands === undefined))
-      return "OMP registry unavailable at session_start; cannot verify /jev ownership";
+    if (!tools || !commands) return "OMP registry unavailable at session_start";
     return runtimeConflict(tools, commands, ownsCommand, deps.packageRoot);
-  }
-
-  /** Register shared names once, only after load-time or session-start ownership checks. */
-  function registerShared() {
-    if (sharedRegistered || loadConflict) return;
-    sharedRegistered = true;
-    if (api.registerTool && canRegister(RECALL_TOOL)) {
-      port.registerTool(recallToolDefinition((params, ctx) => {
-        const state = session;
-        if (!state || state.closed) throw new Error("jev_recall: no active session");
-        return state.context.recallTool(params, ctx);
-      }));
-      recallRegistered = true;
-    }
-    port.registerCommand(LEGACY_COMMAND, { description: OWN_COMMAND_DESCRIPTION, getArgumentCompletions: jevCompletions, handler: command });
-    ownsCommand = true;
-    registerOmpTools(port, canRegister, {
-      assess: async (tool, params, ctx) => {
-        const state = active();
-        if (!state) return assessOffResult(tool);
-        const branch = (() => { try { return ctx.sessionManager.getBranch?.() ?? []; } catch { return []; } })();
-        const messages = branch.flatMap((entry) => ((entry as { type?: unknown }).type === "message" ? [(entry as { message?: unknown }).message] : []));
-        return state.stop.assessTool(tool, params, messages, state.mode);
-      },
-      route: async (params) => {
-        const state = active();
-        return state ? state.stop.routeTool(params, state.mode) : routeOffResult();
-      },
-    });
   }
 
   async function startSession() {
     const loaded = await deps.loadConfig();
     const legacy = await deps.loadLegacyConfig().catch((): LegacyConfig => ({ dir: "" }));
-    const jev = createJevAccess({ config: loaded.config, env: deps.env, onChainAttempt: (attempt) => { if (session) onChainAttempt(session, attempt); },
+    let debugState: SessionState | undefined;
+    const writeDebug = deps.writeDebug ?? ((text: string) => process.stderr.write(`${text}\n`));
+    const jev = createJevAccess({ config: loaded.config, env: deps.env, onChainAttempt: (attempt) => { if (debugState && !debugState.closed) onChainAttempt(debugState, attempt); },
+      onDebug: (event) => {
+        if (!debugState?.debug || debugState.closed) return;
+        try {
+          const ctx = debugState.ui?.ctx;
+          if (api.registerMessageRenderer && api.sendMessage && ctx?.hasUI && ctx.mode === "tui") {
+            // OMP does not render custom entries. Empty content leaves only display details;
+            // aside prevents the host's default streaming steer and triggerTurn prevents a new turn.
+            api.sendMessage({ customType: "jev-debug", content: [], details: jevDebugDetails(event), display: true }, { deliverAs: "aside", triggerTurn: false });
+          } else writeDebug(formatJevDebugCompact(event));
+        } catch { /* Debug output must not affect Jev requests. */ }
+      },
+      debugEnabled: () => debugState?.debug === true && !debugState.closed,
       ...(deps.legacyProvidersPath !== undefined ? { legacyProvidersPath: deps.legacyProvidersPath } : {}), ...(deps.readFile ? { readFile: deps.readFile } : {}) });
-    // Check before claiming shared names; in OMP earlier session_start handlers can bind their
-    // registration APIs only after ours has awaited configuration loading.
     const legacyConflict = sessionConflict();
-    if (deferSharedRegistration && !legacyConflict) registerShared();
     const runId = `run_${deps.newId()}`;
     session = {
       runId,
@@ -370,8 +354,9 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
         getActiveTools: () => port.getActiveTools(),
         audit: (input) => { void session?.audit.record(input); },
       }),
-      // `on` enables only the capabilities whose own switch is on (C1–C3 so far).
+      // T105 L2: `on` enables only the capabilities whose own switch is on (C1–C3 so far).
       mode: legacyConflict || loaded.source === "invalid" || !profile.spec ? "off" : loaded.config.mode,
+      debug: false,
       telemetry: deps.createTelemetry(loaded.config.telemetryDir),
       audit: deps.createAudit(loaded.config.telemetryDir),
       pendingRecords: new Set(),
@@ -386,6 +371,7 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
       ...(legacyConflict ? { legacyConflict } : {}),
       closed: false,
     } as SessionState;
+    debugState = session;
     const state = session;
     const contextDeps = {
       jev, config: loaded.config, settings: ompContextSettings(loaded), runId: state.runId, env: deps.env, fetch: deps.fetch, now: deps.now, newId: deps.newId,
@@ -483,7 +469,7 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
       return result;
     };
 
-    // shares this task's gate and wait budget. Shadow: background, after tool routing.
+    // C12: shares this task's gate and wait budget. Shadow: background, after tool routing.
     // On: reserved first and awaited by before_agent_start so the level is set before the turn.
     const effortMode = effectiveEffort(config.effort, state.mode);
     const effortClient = request("effort");
@@ -524,7 +510,7 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
       ? `OMP ${profile.version}: profile ${profile.spec.id} (events: ${profile.spec.events.join(", ")})`
       : `OMP ${profile.version ?? "unknown"}: no profile (${profile.reason}); all capabilities off`;
     const state = session;
-    if (!state) return [`Jev: off (no session)`, profileLine].join("\n");
+    if (!state) return [`Jev: off (no session)`, "", "[运行时]", profileLine].join("\n");
     const { loaded, mode } = state;
     const configLine =
       loaded.source === "invalid" ? `config: invalid (${loaded.reason}); forced off; file left unchanged: ${loaded.path}`
@@ -532,30 +518,43 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
       : `config: defaults (no file at ${loaded.path})`;
     return [
       `Jev: ${mode} (this session)`,
-      profileLine,
-      configLine,
-      ...(state.legacyConflict ? [`legacy conflict: ${state.legacyConflict}; forced off; /${LEGACY_COMMAND} and ${LEGACY_TOOL} not registered by pi-jev-harness`] : []),
-      `legacy config: ${state.legacy.acceptance || state.legacy.autorun || state.legacy.toolGroups ? `mapped read-only from ${state.legacy.dir}` : "none"}`,
-      ...state.stop.statusLines(mode),
-      ...(mode !== "off" ? gates.statusLines(state) : []),
-      loaded.config.outbound.taskIntent
+      "",
+      "[运行时]",
+      `  ${profileLine}`,
+      `  ${configLine}`,
+      ...(state.legacyConflict ? [`  legacy conflict: ${state.legacyConflict}; forced off; /${LEGACY_COMMAND} and ${LEGACY_TOOL} not registered by pi-jev-harness`] : []),
+      `  legacy config: ${state.legacy.acceptance || state.legacy.autorun || state.legacy.toolGroups ? `mapped read-only from ${state.legacy.dir}` : "none"}`,
+      "",
+      "[能力]",
+      ...state.stop.statusLines(mode).map((line) => `  ${line}`),
+      ...(mode !== "off" ? gates.statusLines(state).map((line) => `  ${line}`) : []),
+      "",
+      "[出站与路由]",
+      `  ${loaded.config.outbound.taskIntent
         ? "outbound: task intent allowed (credential check on)"
-        : "outbound: 任务意图出站未开启 (outbound.taskIntent=false; no Jev request is sent)",
-      `路由：${mode === "off" ? "关闭" : mode === "on" && loaded.config.router.tools === "on" ? "应用" : "仅观察"}`,
-      `router: tools ${loaded.config.router.tools} (applied only in mode on with router.tools on)`,
-      capabilityLine(state),
-      `Jev key: ${readJevKey(deps.env) ? "present" : "missing"}`,
-      ...state.jev.statusLines(),
-      `Jev requests this session: ${state.requests}`,
-      `tasks: ${state.tasks}; ${profile.spec?.stopEvent ?? "stop"} seen: ${state.stops}`,
-      ...state.context.statusLines(mode),
-      ...state.compaction.statusLines(mode),
-      compactHandler === "registered"
+        : "outbound: 任务意图出站未开启 (outbound.taskIntent=false; no Jev request is sent)"}`,
+      `  路由：${mode === "off" ? "关闭" : mode === "on" && loaded.config.router.tools === "on" ? "应用" : "仅观察"}`,
+      `  router: tools ${loaded.config.router.tools} (applied only in mode on with router.tools on)`,
+      `  ${capabilityLine(state)}`,
+      "",
+      "[Jev provider]",
+      `  Jev key: ${readJevKey(deps.env) ? "present" : "missing"}`,
+      ...state.jev.statusLines().map((line) => `  ${line}`),
+      `  Jev debug: ${state.debug ? "on" : "off"} (this session; raw outbound task context when enabled)`,
+      `  Jev requests this session: ${state.requests}`,
+      `  Jev provider chain: last answered ${state.chain.lastAnswered ?? "none"}; fallbacks this session: ${state.chain.fallbacks}; last fallback: ${state.chain.lastReason ?? "none"}`,
+      "",
+      "[会话与上下文]",
+      `  tasks: ${state.tasks}; ${profile.spec?.stopEvent ?? "stop"} seen: ${state.stops}`,
+      ...state.context.statusLines(mode).map((line) => `  ${line}`),
+      ...state.compaction.statusLines(mode).map((line) => `  ${line}`),
+      `  ${compactHandler === "registered"
         ? "session_before_compact: registered at startup (OMP speculative compaction disabled)"
-        : "session_before_compact: not registered (compaction off at startup; turning it on needs an omp restart)",
-      `Jev provider chain: last answered ${state.chain.lastAnswered ?? "none"}; fallbacks this session: ${state.chain.fallbacks}; last fallback: ${state.chain.lastReason ?? "none"}`,
-      `fallback reasons (adapter/tool routing): ${state.fallbackReasons.length ? state.fallbackReasons.join("; ") : "none"}`,
-      ...(duplicateLoads ? [`duplicate loads ignored: ${duplicateLoads}`] : []),
+        : "session_before_compact: not registered (compaction off at startup; turning it on needs an omp restart)"}`,
+      "",
+      "[问题与回退]",
+      `  fallback reasons (adapter/tool routing): ${state.fallbackReasons.length ? state.fallbackReasons.join("; ") : "none"}`,
+      ...(duplicateLoads ? [`  duplicate loads ignored: ${duplicateLoads}`] : []),
     ].join("\n");
   }
 
@@ -608,7 +607,7 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
     return undefined;
   }
 
-  /** Async part of `/jev mode off`: L2 gate release, then jev_recall leaves the active set. */
+  /** Async part of `/jev mode off`: L2 gate release, then jev_recall leaves the active set (L4). */
   async function modeOffCleanup(state: SessionState, leaving: boolean) {
     if (leaving) await gates.modeOff(state);
     try {
@@ -623,6 +622,12 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
     const out = runJevCommand(args, {
       status: statusText,
       setMode,
+      debug: () => session?.debug,
+      setDebug: (enabled) => {
+        if (!session) return false;
+        session.debug = enabled;
+        return true;
+      },
       capability: (name) => (session ? session.stop.capability(name) : undefined),
       setCapability: (name, mode) => (session ? (session.stop.setCapability(name, mode), true) : false),
       continuations: () => session?.stop.continuations(),
@@ -633,7 +638,7 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
     return ctx.ui.notify(out.text, out.level);
   }
 
-  /** advice only; the plan is returned, never dispatched. */
+  /** C6: advice only; the plan is returned, never dispatched. */
   function planTool(params: unknown, signal: AbortSignal | undefined) {
     const state = session;
     const config = state?.loaded.config;
@@ -691,16 +696,16 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
       } catch {
         noteFallback(state, "snapshot: host snapshot failed");
       }
-      // only on + router.tools on is awaited (OMP awaits before_agent_start before the request).
+      // T105 C1: only on + router.tools on is awaited (OMP awaits before_agent_start before the request).
       const gated = gates.startTask(state, prompt, ctx, started?.route);
-      // only on + router.tools on awaits the route; C12 effort on awaits its level (OMP awaits before the request).
+      // T105 C1: only on + router.tools on awaits the route; C12 effort on awaits its level (OMP awaits before the request).
       const awaited = [
         ...(state.mode === "on" && state.loaded.config.router.tools === "on" ? [gated] : []),
         ...(started?.effort ? [started.effort] : []),
       ];
       return awaited.length ? Promise.all(awaited).then(() => undefined, () => undefined) : undefined;
     },
-    // C2/enforce review, then human approval.
+    // T105 C2/C3: enforce review, then human approval.
     tool_call: (event: OmpToolCallEvent, ctx: OmpContext) => {
       track(ctx);
       const state = active();
@@ -720,7 +725,7 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
       gates.input(event.source);
       return undefined;
     },
-    // End-of-task boundary: only mode on may return a continuation; shadow assesses in
+    // End-of-task boundary (T105 C4): only mode on may return a continuation; shadow assesses in
     // the background and returns undefined synchronously.
     session_stop: (event: OmpSessionStopEvent, ctx: OmpContext) => {
       track(ctx);
@@ -742,7 +747,7 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
     session_shutdown: async () => {
       await shutdown();
     },
-    // C7 request reduction, C8 compaction, proactive compaction.
+    // T105 L4: C7 request reduction, C8 compaction, proactive compaction.
     context: async (event: OmpContextEvent, ctx: OmpContext) => {
       track(ctx);
       const state = active();
@@ -774,21 +779,44 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
     canRegister,
     register() {
       lockReason = lockConflict(deps.readPluginsLock);
-      let loadTools: OmpToolInfo[] | undefined;
-      try { loadTools = port.getAllTools(); } catch { /* real OMP binds actions after loading */ }
-      const loadCommands = commandRows();
-      loadConflict = lockReason ?? runtimeConflict(loadTools, loadCommands, false, deps.packageRoot);
+      loadConflict = lockReason ?? runtimeConflict(undefined, commandRows(), false, deps.packageRoot);
       // No profile: session_start only, to record the no_profile diagnostic; mode stays off.
       for (const name of profile.spec?.events ?? ["session_start"]) {
         const handler = handlers[name];
         if (handler) api.on(name, handler as (event: unknown, ctx: OmpContext) => unknown);
       }
-      // Real OMP getters throw during load. Registering here would overwrite an earlier
-      // extension's names before ownership could be checked at session_start.
-      deferSharedRegistration = loadTools === undefined || loadCommands === undefined;
-      if (!deferSharedRegistration) registerShared();
-      // jev_plan is not a legacy name; it remains available even if shared registration
-      // has to wait until session_start. The lock still suppresses all tools as before.
+      // No registration at all while a load-time legacy conflict is known.
+      if (!loadConflict) api.registerMessageRenderer?.<JevDebugDetails>("jev-debug", (message, options) => {
+        return message.details ? renderJevDebug(message.details, options.expanded) : undefined;
+      });
+      if (api.registerTool && !loadConflict && canRegister(RECALL_TOOL)) {
+        port.registerTool(recallToolDefinition((params, ctx) => {
+          const state = session;
+          if (!state || state.closed) throw new Error("jev_recall: no active session");
+          return state.context.recallTool(params, ctx);
+        }));
+        recallRegistered = true;
+      }
+      if (!loadConflict) {
+        port.registerCommand(LEGACY_COMMAND, { description: OWN_COMMAND_DESCRIPTION, getArgumentCompletions: jevCompletions, handler: command });
+        ownsCommand = true;
+      }
+      registerOmpTools(port, canRegister, {
+        assess: async (tool, params, ctx) => {
+          const state = active();
+          if (!state) return assessOffResult(tool);
+          const branch = (() => { try { return ctx.sessionManager.getBranch?.() ?? []; } catch { return []; } })();
+          const messages = branch.flatMap((entry) => ((entry as { type?: unknown }).type === "message" ? [(entry as { message?: unknown }).message] : []));
+          return state.stop.assessTool(tool, params, messages, state.mode);
+        },
+        route: async (params) => {
+          const state = active();
+          return state ? state.stop.routeTool(params, state.mode) : routeOffResult();
+        },
+      });
+      // loadMode essential: OMP 18.3.5 mounts undeclared extension tools under xdev ("discoverable"),
+      // so they never reach the model's top-level tool list. Like every tool of ours: nothing is
+      // registered while a load-time legacy conflict is known.
       if (!loadConflict && canRegister(JEV_PLAN_TOOL)) api.registerTool?.({ name: JEV_PLAN_TOOL, label: "Jev Route Agent Planner", loadMode: "essential",
         description: "Derives and arbitrates subagent delegation topology (direct, single, parallel, dag) using Jev.",
         parameters: JEV_PLAN_PARAMETERS, execute: (_id, params, signal) => planTool(params, signal) });

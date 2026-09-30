@@ -1,5 +1,5 @@
 /**
- * Verifier edge cases for L3; harness copied from stop.test.ts. against a fake OMP host and a fake Jev: completion acceptance at
+ * Verifier edge cases for T105 L3; harness copied from stop.test.ts. T105 L3 (C4, C5, C10) against a fake OMP host and a fake Jev: completion acceptance at
  * `session_stop`, bounded continuation (exactly 0 / 1 / 2), no continuation with pending work or in
  * a child session, the registered tools, every `/jev` subcommand, legacy config mapping, and config
  * `mode: "on"` being effective. No network, no file writes.
@@ -48,8 +48,9 @@ interface HostOptions {
 
 function fakeHost(options: HostOptions = {}) {
   const handlers = new Map<string, OmpHandler[]>();
-  const commands = new Map<string, { handler: (args: string, ctx: OmpContext) => unknown; description?: string }>();
+  const commands = new Map<string, (args: string, ctx: OmpContext) => unknown>();
   const tools = new Map<string, OmpToolDefinition>();
+  const commandMap = new Map<string, { name: string; source: "extension"; description?: string }>();
   const setterCalls: string[] = [];
   const notes: Array<{ message: string; level?: string }> = [];
   const pending = { messages: false, jobs: 0 };
@@ -70,8 +71,11 @@ function fakeHost(options: HostOptions = {}) {
   const api: OmpExtensionAPI = {
     pi: { VERSION: "18.3.5" },
     on(event, handler) { handlers.set(event, [...(handlers.get(event) ?? []), handler]); },
-    registerCommand(name, command) { commands.set(name, { handler: command.handler, description: command.description }); },
-    getCommands: () => [...commands.entries()].map(([name, c]) => ({ name, source: "extension" as const, description: c.description })),
+    registerCommand(name, command) {
+      commands.set(name, command.handler);
+      commandMap.set(name, { name, source: "extension", description: command.description });
+    },
+    getCommands: () => [...commandMap.values()],
     registerTool(tool) { tools.set(tool.name, tool); },
     getAllTools: () => [
       { name: "read", description: "Read a file", parameters: { type: "object", properties: {} }, sourceInfo: { source: "builtin" } },
@@ -90,7 +94,7 @@ function fakeHost(options: HostOptions = {}) {
   };
   const jev = async (args: string) => {
     notes.length = 0;
-    await commands.get("jev")!.handler(args, ctx);
+    await commands.get("jev")!(args, ctx);
     return notes.at(-1)!;
   };
   return { api, ctx, handlers, tools, setterCalls, pending, emit, jev };
@@ -138,7 +142,7 @@ async function start(s: ReturnType<typeof setup>) {
   await s.claim().settled();
 }
 
-// ---- Verifier additions -----------------------------------------------------------
+// ---- Verifier additions (T105 L3) -----------------------------------------------------------
 // OMP v18.3.5 agent-session.ts:4114-4115 emits `session_stop` FIRST and the settle's `agent_end`
 // notification AFTER it, with `willContinue: true` when a session_stop continuation was scheduled.
 // Paths that schedule their own continuation (todo reminder, rewind, plan mode, async wake) emit
@@ -234,7 +238,7 @@ test("verify: concurrent tool calls each get their own per-call budget (maxReque
 test("verify: own config continuation.enabled=false vs legacy autorun on (precedence)", async () => {
   const s = setup({ ...ON, harness: { continuation: { enabled: false } } }, { legacyFiles: { "jev-autorun.json": JSON.stringify({ mode: "on" }) } });
   await start(s);
-  // Explicit own config wins over the legacy file (fix).
+  // Explicit own config wins over the legacy file (T105 L3 fix).
   assert.match(s.claim().statusText(), /autorun: shadow \(source: config\)/);
 });
 

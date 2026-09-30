@@ -1,5 +1,5 @@
 /**
- * host verification: regressions for defects confirmed on the real Pi 0.87.1 host.
+ * T040 host verification: regressions for defects confirmed on the real Pi 0.87.1 host.
  * These tests fail on de06f3a and describe the expected behavior.
  */
 import assert from "node:assert/strict";
@@ -10,7 +10,7 @@ import { JEV_URL, KEY, fakeFetch, fakePi, harness, load, validAnswer } from "./f
 
 const MESSAGE_BASE = { provider: "p", model: "m", usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } }, timestamp: 0 };
 
-// Real host: with mode shadow and context.request shadow, `pi -p` sent
+// Real host (T040 §3.8): with mode shadow and context.request shadow, `pi -p` sent
 // tools [read,bash,edit,write,jev_acceptance_gate,foreman_assess,jev_route,jev_recall] to the provider,
 // while the same session with context.request off sends no jev_recall. Product §4.1: shadow does not
 // change the tool set. Pi 0.87.1 activates a tool registered after load (_refreshToolRegistry), so the
@@ -33,7 +33,7 @@ test("T040: shadow never adds jev_recall to the model's active tools, even with 
   } finally { await h.cleanup(); }
 });
 
-// Real host: after a task whose run.json was written as `failed`, `/jev status` showed
+// Real host (T040 §3.7): after a task whose run.json was written as `failed`, `/jev status` showed
 // "当前任务：verification_unavailable". The status line must not contradict the archived task status.
 test("T040: /jev status shows the archived status of a task that ended in a model error", async () => {
   const h = await harness();

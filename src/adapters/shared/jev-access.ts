@@ -1,5 +1,5 @@
 /**
- * integration: one place that decides which Jev endpoint(s) a capability talks to.
+ * T105 integration: one place that decides which Jev endpoint(s) a capability talks to.
  *
  * Source, in order:
  * 1. config `jev.providers` (+ `jev.capabilities`) → provider chain (`createJevChainClient`);
@@ -23,6 +23,7 @@ import {
   resolveChain,
   TYPESAFE_PROFILE,
   type JevAttempt,
+  type JevDebugEvent,
   type JevCapability,
   type JevChainAttempt,
   type JevChainConfig,
@@ -45,6 +46,10 @@ export interface JevAccessOptions {
   fileMode?: (path: string) => number | undefined;
   /** Every chain step of every client this access creates (content-free; see `JevChainAttempt`). */
   onChainAttempt?: (attempt: JevChainAttempt) => void;
+  /** Physical Jev request and response observer (not telemetry). */
+  onDebug?: (event: JevDebugEvent) => void;
+  /** Avoid preparing trace bodies while the session switch is off. */
+  debugEnabled?: () => boolean;
 }
 
 export interface JevClientRequest {
@@ -123,19 +128,24 @@ export function createJevAccess(options: JevAccessOptions): JevAccess {
         if (!providers.some((p) => !p.missingKey)) return undefined;
         client = createJevChainClient({ providers, fetch: request.fetch, now: request.now, newId: request.newId, waitMs: request.waitMs,
           ...(request.onAttempt ? { onAttempt: request.onAttempt } : {}),
+          ...(options.onDebug ? { onDebug: options.onDebug } : {}),
+          ...(options.debugEnabled ? { debugEnabled: options.debugEnabled } : {}),
           ...(options.onChainAttempt ? { onChainAttempt: options.onChainAttempt } : {}) });
       } else if (options.onChainAttempt) {
         // Single-url as a 1-provider chain, so its attempts are reported like any chain step.
         if (!key) return undefined;
         const spec = { id: TYPESAFE_PROFILE.id, url: config.jev.url, model: request.model ?? TYPESAFE_PROFILE.model, identity: TYPESAFE_PROFILE.identity ?? "exact", timeoutMs: config.jev.timeoutMs };
         client = createJevChainClient({ providers: [{ spec, key, missingKey: false }], fetch: request.fetch, now: request.now, newId: request.newId, waitMs: request.waitMs,
-          ...(request.onAttempt ? { onAttempt: request.onAttempt } : {}), onChainAttempt: options.onChainAttempt });
+          ...(request.onAttempt ? { onAttempt: request.onAttempt } : {}), ...(options.onDebug ? { onDebug: options.onDebug } : {}),
+          ...(options.debugEnabled ? { debugEnabled: options.debugEnabled } : {}), onChainAttempt: options.onChainAttempt });
       } else {
         if (!key) return undefined;
         client = createJevClient({
           profile: { ...TYPESAFE_PROFILE, url: config.jev.url, timeoutMs: config.jev.timeoutMs, ...(request.model ? { model: request.model } : {}) },
           key, fetch: request.fetch, now: request.now, newId: request.newId,
           ...(request.onAttempt ? { onAttempt: request.onAttempt } : {}),
+          ...(options.onDebug ? { onDebug: options.onDebug } : {}),
+          ...(options.debugEnabled ? { debugEnabled: options.debugEnabled } : {}),
         });
       }
       return request.take ? unitBound(client, request.take) : client;

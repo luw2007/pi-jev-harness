@@ -13,7 +13,7 @@ const KEY = "FAKEINLINEhost5Qx8Zr2Mv7Kp3";
 const TS_KEY = "FAKETSHOSTkey9911bb";
 const LEGACY_PATH = "/fake/omp/agent/jev-providers.json";
 const legacyFile = (field: string) => JSON.stringify({ schemaVersion: 1, default: "internal", fallback: ["typesafe"],
-  providers: { internal: { url: "https://internal.example.invalid/v1", model: "jev-internal", [field]: KEY } } });
+  providers: { internal: { url: "https://internal.example.invalid/v1", model: "bjev", [field]: KEY } } });
 
 function setup(legacy: string, internal: "throw" | "503") {
   const handlers = new Map<string, OmpHandler[]>();

@@ -19,16 +19,16 @@ const HITS: Array<[string, string]> = [
   ["Slack xoxb-", j("xo", "xb-", "1234567890-abcdefghij")],
   ["Slack xoxp-", j("xo", "xp-", "0987654321-klmnopqrst")],
   ["GitHub github_pat_", j("github", "_pat_", "11ABCDEFG0123456789_abcdefghijklmnop")],
-  // H2: a letters-only value is a secret once it is long enough.
+  // T043 H2: a letters-only value is a secret once it is long enough.
   ["JSON apiKey letters only", j('{"api', 'Key": "', "abcdefghijklmnopqrstuvwx", '"}')],
   ["YAML token letters only", j("to", "ken: ", "QwErTyUiOpAsDfGhJk")],
-  // M5: prefixes in any case.
+  // T043 M5: prefixes in any case.
   ["upper SK-", j("token is ", "SK", "-ABCDEFGH12345678")],
   ["upper GHP_", j("GH", "P_", "abcdefgh12345678")],
   ["upper XOXB-", j("XO", "XB-", "1234567890-abcdefghij")],
   ["upper GLPAT-", j("GL", "PAT-", "xY12zW34vU56tS78rQ90")],
   ["lower akia", j("ak", "ia", "ABCDEFGHIJKLMNOP")],
-  // defect 2: glued to a JSON-escaped newline or after an underscore.
+  // T041 defect 2: glued to a JSON-escaped newline or after an underscore.
   ["JSON-escaped newline sk-", JSON.stringify({ m: j("Incorrect API key provided:\n", "sk-", "proj-ABCDEFGH12345678abcdefgh") })],
   ["JSON-escaped tab ghp_", j("x\\t", "ghp_", "abcdefgh12345678")],
   ["underscore-glued DB_PASSWORD", j("DB_PASS", "WORD=", "hunter2")],
@@ -68,7 +68,7 @@ for (const text of PASSES) {
 
 const PEM_BODY = j("MIIEowIBAAKCAQEA", "7bq9XyZ0p1Qw2Er3Ty4Ui5Op6As7Df8Gh9Jk");
 
-// H3/H4/defect 2: scrubbing removes the whole secret value, not only its keyword or banner.
+// T043 H3/H4/defect 2: scrubbing removes the whole secret value, not only its keyword or banner.
 const SCRUBS: Array<[string, string, string]> = [
   ["H3 keyword = quoted letters-only value", j('upstream rejected: api', 'Key = "', "abcdefghijklmnopqrstuvwx", '" invalid'), "abcdefghijklmnopqrstuvwx"],
   ["H3 keyword = unquoted value", j("pass", "word=", "hunter2hunter2", " next"), "hunter2"],

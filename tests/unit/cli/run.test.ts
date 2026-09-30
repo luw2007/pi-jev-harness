@@ -254,7 +254,7 @@ test("parseDuration: units and bare seconds", () => {
   assert.throws(() => parseDuration("-1s"));
 });
 
-// verifier regression: on the real host a --max-time abort left run.json `completed` and exited 0.
+// T031 verifier regression: on the real host a --max-time abort left run.json `completed` and exited 0.
 test("T031: a timed-out run never exits 0, whatever run.json says", async () => {
   await withTemp(async (root) => {
     const f = fake(root, { hang: true, status: "completed" });
@@ -286,7 +286,7 @@ test("T035: a task starting with / is a usage error before any session", async (
   });
 });
 
-// every model request failed; off mode writes nothing by design.
+// T039: every model request failed; off mode writes nothing by design.
 const SECRET = "sk-proj-ABCDEFGH12345678abcdefgh";
 
 test("T039: run.json status failed exits 1 and shows the adapter's failure reason", async () => {

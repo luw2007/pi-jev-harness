@@ -1,5 +1,5 @@
 /**
- * OMP Jev budget contract. The single place that states how Jev requests are counted;
+ * OMP Jev budget contract (T105). The single place that states how Jev requests are counted;
  * the code that enforces each rule is named next to it.
  *
  * 1. Per-task counter (`budget.maxRequestsPerTask`, wait `budget.waitMs`), reset at each new
@@ -20,7 +20,7 @@
  *    `budget.compactRequests` per compaction and `budget.compactWaitMs` (./compaction.ts); it
  *    neither spends nor needs the task counter. C7 request reduction keeps its own per-task
  *    counter (same `maxRequestsPerTask`, separate from rule 1) in the shared Pi context hook.
- * 4. A provider-chain call (../shared/jev-access.ts) is one unit wherever it is
+ * 4. A provider-chain call (T105 C9, ../shared/jev-access.ts) is one unit wherever it is
  *    counted, however many providers it falls back through; the chain's total wait is the
  *    caller's wait budget. The session counter in `/jev status` ("Jev requests this session")
  *    still counts physical HTTP requests.

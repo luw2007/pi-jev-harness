@@ -26,7 +26,7 @@ const answer = (model: string) =>
 
 const legacyFile = (internal: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
   JSON.stringify({ schemaVersion: 1, default: "internal", fallback: ["typesafe"],
-    providers: { internal: { url: "https://internal.test/v1", model: "jev-internal", ...internal } }, ...extra });
+    providers: { internal: { url: "https://internal.test/v1", model: "bjev", ...internal } }, ...extra });
 
 const noLeak = (value: unknown, label: string) => {
   const text = typeof value === "string" ? value : JSON.stringify(value);

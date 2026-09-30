@@ -1,5 +1,5 @@
 /**
- * wiring surface for the OMP host: C1 tool apply (`./tool-apply.ts`), C2 enforce
+ * T105 L2 wiring surface for the OMP host: C1 tool apply (`./tool-apply.ts`), C2 enforce
  * (`./enforce.ts`) and C3 approval + steer (`./approval.ts`). `./host.ts` calls these from its
  * handlers with the session state; nothing here registers events.
  *
@@ -41,7 +41,7 @@ export interface GateDeps {
   /** One unit from the host-owned per-task counter (routing, effort, enforce, approval); false = exhausted. */
   reserveTask: () => boolean;
   noteFallback: (reason: string) => void;
-  /** content-free approval decision line (the session's audit writer). */
+  /** C11: content-free approval decision line (the session's audit writer). */
   audit?: (input: AuditInput) => void;
 }
 

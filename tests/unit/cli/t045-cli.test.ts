@@ -1,5 +1,5 @@
 /**
- * host-verified CLI defects. E1 (Ctrl-C leaves a cancelled run), `--json` carries
+ * T045: host-verified CLI defects. E1 (Ctrl-C leaves a cancelled run), `--json` carries
  * `completion`, E10 (export labels keep parenthesised separators), doctor probes the resolved runsDir.
  * Signals are simulated through the injectable `signals` hook; no real signal reaches this process.
  */
@@ -71,7 +71,7 @@ function signalFake(root: string, options: { abortStatus?: string; abortHangs?: 
       const listeners: ((event: AgentSessionEvent) => void)[] = [];
       let release: (status: string) => void = () => {};
       // Synchronous on purpose: abort() -> release -> run.json -> settled stays within microtasks, so the
-      // `abortGraceMs` timer (a macrotask) can never win the race however loaded the machine is.
+      // `abortGraceMs` timer (a macrotask) can never win the race however loaded the machine is (T050).
       const writeRun = (status: string) => {
         const dir = join(opts.env.PI_JEV_RUNS_DIR!, opts.env.PI_JEV_RUN_ID!);
         mkdirSync(dir, { recursive: true });

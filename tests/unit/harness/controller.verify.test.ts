@@ -1,4 +1,4 @@
-// verification: edge cases for src/harness/controller.ts beyond the builder tests.
+// T030 verification: edge cases for src/harness/controller.ts beyond the T022 builder tests.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { COMPLETION_POLICY_VERSION, type CompletionResult, type CompletionStatus } from "../../../src/harness/completion.ts";
@@ -198,7 +198,7 @@ test("verify controller: starting in off mode never assesses at any boundary", a
   assert.equal(assessCalls.length, 0);
 });
 
-// new progress during an in-flight before_settle invalidates its decision.
+// T036 (T030 §4.2): new progress during an in-flight before_settle invalidates its decision.
 test("verify controller: a tool_result while decide is in flight discards the continue and records stale:checkpoint", async () => {
   const gate = deferred<ContinuationDecision>();
   const { controller, assessCalls } = setup({ completion: incomplete, decide: () => gate.promise });

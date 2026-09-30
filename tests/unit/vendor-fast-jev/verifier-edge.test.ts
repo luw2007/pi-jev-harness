@@ -1,4 +1,4 @@
-// Verifier edge cases for the vendored fast-jev kernel. Offline only.
+// Verifier edge cases for the vendored fast-jev kernel (T023). Offline only.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { applyDecisions, compact } from "../../../vendor/fast-jev/compact.ts";

@@ -1,5 +1,5 @@
 /**
- * Verifier round 3 (@ a04bc1f): repo-source precheck before meta.json, no scratch leak when a
+ * Verifier round 3 (T102 @ a04bc1f): repo-source precheck before meta.json, no scratch leak when a
  * sibling run fails at --concurrency 2, and arm env validated through loadConfig. Drives the real
  * bench/run.ts entry with the local fake LLM (no real model).
  */

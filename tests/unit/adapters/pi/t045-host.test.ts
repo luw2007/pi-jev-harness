@@ -1,5 +1,5 @@
 /**
- * host-verified adapter defects on the fake host. E2 (the exec tool stays resident under
+ * T045: host-verified adapter defects on the fake host. E2 (the exec tool stays resident under
  * tool routing), E3 (a user abort is cancelled at every timing), E7 (routing outcomes in the run
  * record; telemetry runId equals run.json runId).
  */

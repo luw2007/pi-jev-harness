@@ -1,5 +1,5 @@
 /**
- * Read-only mapping of the legacy `@omp-jev/harness` config files in `~/.omp/agent`:
+ * Read-only mapping of the legacy `@omp-jev/harness` config files (T105 C10) in `~/.omp/agent`:
  * `jev-harness.json` (schemaVersion 1, `capabilities.<name>.mode`), `jev-autorun.json` (`mode`,
  * `toolGroups`) and `acceptance-gate.json` (`mode`). Same precedence as the legacy loader:
  * jev-harness.json first, then the per-capability file. Legacy `dry-run` maps to `shadow`.

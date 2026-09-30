@@ -1,5 +1,5 @@
 /**
- * verification of checkpoint semantics and failed runs through the
+ * T041 verification of T036 (D2/D3/D4, checkpoint semantics) and T039 (failed runs) through the
  * real extension entry (`createExtension`) on the fake Pi host. No real Pi, Jev or model.
  */
 import assert from "node:assert/strict";
@@ -97,7 +97,7 @@ function git(cwd: string, ...args: string[]) {
   execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", ...args], { cwd, stdio: "pipe" });
 }
 
-// ---- D3: aborted runs -------------------------------------------------------------------
+// ---- T036 D3: aborted runs -------------------------------------------------------------------
 
 test("T036 D3: a task aborted before any tool call is cancelled, with no assessment and no changes", async () => {
   const s = await session();
@@ -137,7 +137,7 @@ test("T036 D3: an abort after a model error is cancelled (the abort wins), not f
   } finally { await s.h.cleanup(); }
 });
 
-// ---- D2: model errors -------------------------------------------------------------------
+// ---- T036 D2: model errors -------------------------------------------------------------------
 
 test("T036 D2: a model error after a real code change is failed, not incomplete", async () => {
   const s = await session();
@@ -155,7 +155,7 @@ test("T036 D2: a model error after a real code change is failed, not incomplete"
   } finally { await s.h.cleanup(); }
 });
 
-// ---- D4: workspace changeset through the adapter ----------------------------------------
+// ---- T036 D4: workspace changeset through the adapter ----------------------------------------
 
 test("T036 D4 (non-git): a file deleted by bash and a binary file changed by bash are this task's changes", async () => {
   const s = await session({ prepare: async (ws) => {
@@ -238,7 +238,7 @@ test("T036 D4: an unreadable workspace directory makes the snapshot fail; a pass
   }
 });
 
-// ---- checkpoint semantics through the adapter ------------------------------------------
+// ---- T036: checkpoint semantics through the adapter ------------------------------------------
 
 test("T036: a tool_result arriving while before_settle is assessing voids that assessment; the run is not completed on it", async () => {
   let release: () => void = () => {};
@@ -269,7 +269,7 @@ test("T036: a tool_result arriving while before_settle is assessing voids that a
   } finally { await s.h.cleanup(); }
 });
 
-// ---- failed runs, scrubbing and idempotent finalize ------------------------------------
+// ---- T039: failed runs, scrubbing and idempotent finalize ------------------------------------
 
 const SECRETS = [
   "sk-proj-ABCDEFGH12345678abcdefgh",

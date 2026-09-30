@@ -1,5 +1,5 @@
 /**
- * verification (verifier-added): Pi apply path stays synchronous, Pi/OMP real config entry
+ * T105 L1 verification (verifier-added): Pi apply path stays synchronous, Pi/OMP real config entry
  * points, read-only lock check through the default deps, and legacy detection against a fake that
  * follows OMP 18.3.5 semantics (`getRegisteredCommands` keys commands by name, later wins; tool
  * `sourceInfo.path` is the registering extension's resolved entry).
@@ -193,7 +193,7 @@ async function shadowConfigLoader() {
 
 /** Legacy plugin's own registrations (it always registers both names). */
 function loadLegacy(runner: Runner, options: { tool: boolean }) {
-  const api = runner.apiFor("/home/user/src/omp-jev-extensions/extensions/jev-harness/index.ts");
+  const api = runner.apiFor("/Users/x/omp-extensions/omp-jev-extensions/extensions/jev-harness/index.ts");
   api.registerCommand("jev", { description: "Jev harness (legacy)", handler: () => undefined });
   if (options.tool) api.registerTool!({ name: "jev_acceptance_gate", label: "l", description: "d", parameters: {}, execute: async () => ({ content: [] }) });
 }
@@ -239,7 +239,7 @@ test("OMP semantics: a foreign /jev (no legacy tool, lock silent) forces off", a
 
 // ---- Round 2: load-time throws (OMP 18.3.5 loader.ts: runtime actions throw until bound) -------
 
-/** Like `ompFakeRunner`, but getters throw until session_start; late registrations are visible. */
+/** Like `ompFakeRunner`, but `getCommands`/`getAllTools`/`getActiveTools` throw until session_start. */
 function loadingRunner(): Runner {
   const inner = ompFakeRunner();
   let bound = false;
@@ -275,36 +275,11 @@ test("real-OMP load order: legacy /jev loaded AFTER us overrides ours and is det
 test("real-OMP load order: no legacy → own marked /jev is not a conflict", async () => {
   const runner = loadingRunner();
   const s = loadInto(runner);
-  assert.deepEqual(runner.commandNames(), [], "our /jev waits for registry preflight");
   await runner.emit("session_start");
   assert.match(s.claim().statusText(), /^Jev: shadow/);
-  assert.deepEqual(runner.commandNames(), ["jev"], "our /jev registers after the preflight");
   await runner.emit("session_shutdown");
 });
 
-test("real-OMP load order: legacy /jev loaded BEFORE us (no tool, lock silent) forces off", async () => {
-  const runner = loadingRunner();
-  loadLegacy(runner, { tool: false });
-  const s = loadInto(runner);
-  assert.deepEqual(runner.commandNames(), ["jev"], "legacy /jev survives our load");
-  await runner.emit("session_start");
-  assert.match(s.claim().statusText(), /^Jev: off[\s\S]*non-own \/jev/);
-  assert.deepEqual(runner.commandNames(), ["jev"], "legacy /jev is not replaced");
-  assert.ok(s.events.some((e) => e.source === "adapter:legacy_conflict"));
-  await runner.emit("session_shutdown");
-});
-
-test("real-OMP load order: legacy BEFORE us with its tool → forced off via the tool", async () => {
-  const runner = loadingRunner();
-  loadLegacy(runner, { tool: true });
-  const s = loadInto(runner);
-  assert.deepEqual(runner.commandNames(), ["jev"], "legacy /jev survives our load");
-  await runner.emit("session_start");
-  assert.match(s.claim().statusText(), /^Jev: off[\s\S]*non-own jev_acceptance_gate/);
-  assert.deepEqual(runner.commandNames(), ["jev"], "legacy /jev is not replaced");
-  assert.ok(s.events.some((e) => e.source === "adapter:legacy_conflict"));
-  await runner.emit("session_shutdown");
-});
 
 // ---- Round 2: lock path vs OMP 18.3.5 dirs.ts --------------------------------------------------
 

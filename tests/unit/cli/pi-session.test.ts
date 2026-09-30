@@ -1,5 +1,5 @@
 /**
- * verifier regression: the real `createPiSession` must leave the session with its extensions
+ * T031 verifier regression: the real `createPiSession` must leave the session with its extensions
  * bound (Pi's `session_start` emitted), as every Pi mode does via `session.bindExtensions()`.
  * Without it the pi-jev adapter never starts a session and `pi-jev run` can never find run.json.
  * Offline: real Pi SDK, temp agent dir, no prompt, no model request.

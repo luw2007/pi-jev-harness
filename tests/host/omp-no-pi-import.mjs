@@ -1,4 +1,4 @@
-// Check: the OMP entry loads with @earendil-works/* unresolvable and pulls nothing from node_modules.
+// T103b check: the OMP entry loads with @earendil-works/* unresolvable and pulls nothing from node_modules.
 import { registerHooks } from "node:module";
 const seen = [];
 registerHooks({

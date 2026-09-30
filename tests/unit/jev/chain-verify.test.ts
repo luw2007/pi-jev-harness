@@ -1,4 +1,4 @@
-// Verifier edge cases for the C9 provider chain.
+// Verifier edge cases for the C9 provider chain (T105 L5).
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
@@ -196,12 +196,12 @@ test("config: capabilities without providers, inline key in a capability, keyEnv
   assert.ok(!JSON.stringify(invalid).includes("sk-inline-secret"));
 });
 
-test("legacy: real-file shape (keyless internal Jev deployment, fallback typesafe, no capabilities)", () => {
-  const raw = { schemaVersion: 1, default: "internal", fallback: ["typesafe"], providers: { internal: { url: "https://jev.example.invalid/v1", model: "jev-internal", timeoutMs: 3000 } } };
+test("legacy: real-file shape (keyless internal bjev, fallback typesafe, no capabilities)", () => {
+  const raw = { schemaVersion: 1, default: "internal", fallback: ["typesafe"], providers: { internal: { url: "https://bjev.invalid/v1", model: "bjev", timeoutMs: 3000 } } };
   const r = readLegacyProviders("/p", () => JSON.stringify(raw));
   assert.ok(r.ok);
   assert.deepEqual(r.config.providers.map((p) => [p.id, p.model, p.identity, p.timeoutMs, p.keyEnv]), [
-    ["internal", "jev-internal", "none", 3000, undefined],
+    ["internal", "bjev", "none", 3000, undefined],
     ["typesafe", "jev-1.13.0", "exact", 15_000, "TYPESAFE_API_KEY"],
   ]);
   assert.deepEqual(chainFor(r.config, "compact").map((p) => p.id), ["internal", "typesafe"]);
@@ -229,8 +229,8 @@ test("round 2: legacy parity with old providers.ts", () => {
   assert.ok(inline.ok && inline.config.providers[0]!.keyEnv === undefined && inline.config.providers[0]!.apiKey === "inline-key");
   assert.equal(read(p({ url: "https://a.test/?k=sk-abcdefghijkl" })).ok, false);
   assert.equal(read(p({ model: "   " })).ok, false);
-  const trimmedRes = read(p({ model: "  jev-internal  " }));
-  assert.ok(trimmedRes.ok && trimmedRes.config.providers[0]!.model === "jev-internal");
+  const trimmedRes = read(p({ model: "  bjev  " }));
+  assert.ok(trimmedRes.ok && trimmedRes.config.providers[0]!.model === "bjev");
   // The pin deviation is surfaced whenever typesafe is in play.
   assert.ok(viaEnv.ok && viaEnv.warnings.some((w) => w.includes("jev-1.13.0")));
 });

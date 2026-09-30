@@ -1,5 +1,5 @@
 /**
- * Host verification: real Ctrl-C on `pi-jev run` during a bash tool. Pi 0.87.1 ends
+ * T046 (host verification round 2): real Ctrl-C on `pi-jev run` during a bash tool. Pi 0.87.1 ends
  * the aborted turn with an assistant message `stopReason: "error"`, `errorMessage: "This operation
  * was aborted"`. run.json and the JSON result correctly say 用户取消, but the stderr progress stream
  * printed `[模型请求失败] This operation was aborted`, telling the user a provider failed when they
@@ -48,7 +48,7 @@ test("T046: after SIGINT the progress stream does not label the aborted turn as 
             emit({ type: "tool_execution_start", toolName: "bash", toolCallId: "t1", args: {} });
             started();
             await new Promise<void>((resolve) => (release = resolve));
-            // What Pi 0.87.1 emits after session.abort() while bash runs (real host).
+            // What Pi 0.87.1 emits after session.abort() while bash runs (real host, T046).
             emit({ type: "tool_execution_end", toolName: "bash", toolCallId: "t1", isError: true, result: { content: [{ type: "text", text: "Command aborted" }] } });
             emit({ type: "message_end", message: { role: "assistant", content: [], stopReason: "error", errorMessage: "This operation was aborted" } });
             const dir = join(opts.env.PI_JEV_RUNS_DIR!, opts.env.PI_JEV_RUN_ID!);

@@ -24,7 +24,7 @@ export function hostToolsFromPi(all: readonly ToolInfo[], active: readonly strin
   }));
 }
 
-// ---- applying a routed tool bundle in mode `on` -------------------------------------------
+// ---- T037: applying a routed tool bundle in mode `on` -------------------------------------------
 
 /** `jev_route` compatibility tool name. */
 export const ROUTE_TOOL = "jev_route";
@@ -38,7 +38,7 @@ export const JEV_TOOL_IDS: readonly string[] = [ACCEPTANCE_TOOL, FOREMAN_TOOL, R
 
 /**
  * The host's execution/check tool. Completion needs check evidence and a continuation asks for
- * "补验证", so removing it would make implementation tasks structurally uncompletable.
+ * "补验证", so removing it would make implementation tasks structurally uncompletable (T045 E2).
  * Pi 0.87.1 marks no tool as the shell on `ToolInfo`; its builtin `bash` is the only exec tool.
  * Upgrade when a host exposes such a marker: derive this list from it.
  */

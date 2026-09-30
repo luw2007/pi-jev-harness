@@ -5,7 +5,7 @@
  * extensibility/extensions/{runner,loader}.ts, session/agent-session{,-types}.ts). They are OMP's
  * own shapes, never Pi's types: nothing here is cast to `@earendil-works/pi-coding-agent`.
  *
- * Members added for are optional: older fakes/hosts may lack them, and callers must
+ * Members added for T105 are optional: older fakes/hosts may lack them, and callers must
  * feature-check (the OMP port in `./port.ts` does).
  */
 
@@ -118,7 +118,7 @@ export interface OmpContext {
   getAsyncJobSnapshot?(): OmpAsyncJobSnapshot | null;
   isIdle?(): boolean;
   agent?: OmpAgentIdentity;
-  /** Starts a compaction (proactive compaction); callbacks report the outcome. */
+  /** Starts a compaction (T105 L4 proactive compaction); callbacks report the outcome. */
   compact?(options?: { onComplete?: () => void; onError?: (error: Error) => void }): Promise<void> | void;
 }
 
@@ -235,12 +235,20 @@ export interface OmpCommandOptions {
   handler: (args: string, ctx: OmpContext) => unknown;
 }
 
-/**
- * The `pi` object handed to an OMP extension factory. Runtime actions (`getAllTools`,
- * `getActiveTools`, `setActiveTools`, `getCommands`) throw during extension load and work from
- * `session_start` on. `registerTool` / `registerCommand` with a name already taken: the later
- * loader silently wins.
- */
+/** Foldable extension transcript component (the host supplies terminal width). */
+export interface OmpDebugComponent {
+  render(width: number): string[];
+  invalidate(): void;
+}
+
+export interface OmpDebugMessage<T = unknown> {
+  customType: string;
+  content: string | [];
+  details?: T;
+  display: boolean;
+}
+
+/** The OMP extension API subset; runtime registry access works from session_start on. */
 export interface OmpExtensionAPI {
   /** OMP's own module namespace; `VERSION` is the host version string (e.g. "18.3.5"). */
   pi?: { VERSION?: unknown };
@@ -253,8 +261,9 @@ export interface OmpExtensionAPI {
   getThinkingLevel(): unknown;
   /** OMP 18.3.5 returns `Promise<void>`; await it before reading the tool set back (the port does). */
   setActiveTools(names: string[]): unknown;
-  /** Inject a custom message; `deliverAs: "steer"` interrupts the running turn (steer). */
-  sendMessage?(message: { customType: string; content: string; display?: boolean }, options?: { deliverAs?: "steer" | "followUp" | "nextTurn" }): unknown;
+  /** Empty content plus details avoids exposing debug bodies to the model; aside never steers a running turn. */
+  sendMessage?(message: OmpDebugMessage, options?: { deliverAs?: "steer" | "followUp" | "nextTurn" | "aside"; triggerTurn?: boolean }): unknown;
+  registerMessageRenderer?<T = unknown>(customType: string, renderer: (message: OmpDebugMessage<T>, options: { expanded: boolean; outputPad: number }, theme: unknown) => OmpDebugComponent | undefined): void;
   // Setters exist on the host; the adapter never calls them (unit tests assert this).
   setModel(model: unknown): unknown;
   setThinkingLevel(level: unknown): unknown;

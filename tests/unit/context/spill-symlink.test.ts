@@ -1,4 +1,4 @@
-// M2: a pre-existing symlink at the store root or session directory is refused, and nothing
+// T043 M2: a pre-existing symlink at the store root or session directory is refused, and nothing
 // is chmodded or written through it.
 import assert from "node:assert/strict";
 import { chmod, mkdir, mkdtemp, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";

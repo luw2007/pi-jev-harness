@@ -20,7 +20,7 @@
  *   are listed as pre-existing changes, never as this task's changes on their own.
  * - Run outcome: an aborted run (before_settle `aborted`, an aborted assistant message, Pi's run
  *   signal aborted at message_end/tool_result/before_settle, an assistant error that is an abort
- *   error, session shutdown) is cancelled with reason `用户取消：…` (an abort landing in a
+ *   error, session shutdown) is cancelled with reason `用户取消：…` (T045 E3: an abort landing in a
  *   tool surfaces as stopReason `error` "This operation was aborted" and Pi clears its run signal
  *   before before_settle); a run whose last model request ended in error is failed (reason
  *   `模型请求失败：<provider message, credentials scrubbed>` and a `model_request` receipt). Neither
@@ -147,7 +147,7 @@ export function scrubCredentials(text: string, jevKeys: string | readonly string
 /** Longest command text kept as a verification name. */
 const MAX_CHECK_NAME_CHARS = 200;
 
-/** Verification commands; host-neutral (`../core/checks.ts`). */
+/** Verification commands; host-neutral since T105 (`../core/checks.ts`). */
 export { CHECK_COMMAND } from "../core/checks.ts";
 import { CHECK_COMMAND } from "../core/checks.ts";
 
@@ -234,7 +234,7 @@ interface TaskRun {
   status: TaskStatus | null;
   /** Set once `agent_settled` began closing this task; a later shutdown waits for it instead of cancelling. */
   settling: Promise<void> | null;
-  /** Host-owned routing outcomes of this task, copied into run.json. */
+  /** Host-owned routing outcomes of this task (T045 E7), copied into run.json. */
   routing: RunRouting | undefined;
 }
 
@@ -339,7 +339,7 @@ function verificationOf(evidence: Evidence): VerificationStatus {
 export function createPiHarness(deps: HarnessDeps): PiHarness {
   const { config } = deps;
   const enforce: readonly string[] = config.harness.enforce;
-  // the `acceptance` chain for acceptance, continuation and enforce reviews.
+  // C9: the `acceptance` chain for acceptance, continuation and enforce reviews.
   const access = deps.jev ?? createJevAccess({ config, env: deps.env });
   const counts = { envelopes: 0, invalid: 0, blocked: 0, wouldBlock: 0, reviewsSent: 0 };
   let mode: AdapterMode = deps.mode;
@@ -774,7 +774,7 @@ export function createPiHarness(deps: HarnessDeps): PiHarness {
         status = "cancelled";
         reasons.push(`${USER_CANCEL}：任务被中止（${run.ended?.detail ?? "任务在完成验收前被取消"}）`);
       } else if (run.ended?.outcome === "error") {
-        // Explicit (D2): a model request that ended in error never finished the task.
+        // Explicit (T031 D2): a model request that ended in error never finished the task.
         status = "failed";
         reasons.push(`${MODEL_FAILURE_STAGE}：${run.ended.detail}`);
         receipts.push(modelFailureReceipt(run, run.ended.detail));
@@ -856,7 +856,7 @@ export function createPiHarness(deps: HarnessDeps): PiHarness {
    */
   function noteOutcome(run: TaskRun, outcome: unknown, detail: string): void {
     if (run.ended?.outcome === "aborted") return;
-    // Provider text may echo a key: scrub first, then cap.
+    // Provider text may echo a key: scrub first, then cap (T039).
     const text = scrubCredentials(detail, access.secrets).slice(0, MAX_OUTCOME_DETAIL_CHARS);
     if (outcome === "aborted") {
       run.lifecycle.cancel();
@@ -971,7 +971,7 @@ export function createPiHarness(deps: HarnessDeps): PiHarness {
       const run = current;
       if (!run) return;
       // Concurrent settles share one close; `settling` is set synchronously so a shutdown arriving
-      // while the products are being written waits for them instead of cancelling (defect 1).
+      // while the products are being written waits for them instead of cancelling (T041 defect 1).
       run.settling ??= (async () => {
         run.lifecycle.settled();
         await Promise.allSettled([...run.reviews]);

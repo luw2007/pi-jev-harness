@@ -130,7 +130,7 @@ export interface RoutingOutcome {
   resident?: string[];
 }
 
-/** Tool routing only: model routing was removed (model selection is magpie's). */
+/** Tool routing only: model routing was removed (T051; model selection is magpie's). */
 export interface RunRouting {
   tools: RoutingOutcome;
 }

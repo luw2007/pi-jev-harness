@@ -1,5 +1,5 @@
 /**
- * OMP context settings: C7 request reduction, C8 compaction, proactive compaction, and
+ * OMP context settings (T105 L4): C7 request reduction, C8 compaction, proactive compaction, and
  * compatibility with the legacy `@omp-jev/harness` variables and files.
  *
  * Precedence per field: env > new config (`~/.omp/agent/pi-jev-harness/config.json`) > legacy file
@@ -28,7 +28,7 @@ import type { ContextRequestMode, LoadedConfig } from "./shared.ts";
 export type SettingSource = "env" | "config" | "legacy" | "default";
 
 export interface OmpContextSettings {
-  /** fast-jev verbatim compaction at `session_before_compact`. */
+  /** C8: fast-jev verbatim compaction at `session_before_compact`. */
   compaction: ContextRequestMode;
   proactive: {
     mode: ContextRequestMode;
@@ -45,7 +45,7 @@ export interface OmpContextSettings {
   /** Skip request reduction when the latest usage is at least this share cache reads; undefined = no guard. */
   cacheCeiling: number | undefined;
   model: string | undefined;
-  /** a low score may drop the tool call record too (legacy `OMP_JEV_ALLOW_DROPPING_CALLS=1`). Default false. */
+  /** C8: a low score may drop the tool call record too (legacy `OMP_JEV_ALLOW_DROPPING_CALLS=1`). Default false. */
   allowDroppingCalls: boolean;
   notes: string[];
   sources: Record<string, SettingSource>;

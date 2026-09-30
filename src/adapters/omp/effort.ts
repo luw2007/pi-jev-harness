@@ -1,5 +1,5 @@
 /**
- * Effort suggestion, legacy `jev-autorun` `before_agent_start` behaviour.
+ * Effort suggestion (T105 C12), legacy `jev-autorun` `before_agent_start` behaviour.
  *
  * Config `effort`: off (no Jev request at all) | shadow (default: ask Jev and audit the suggested
  * thinking level only) | on (also call `setThinkingLevel` once per decision). `setModel` is never

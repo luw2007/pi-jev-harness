@@ -1,5 +1,5 @@
 /**
- * offline: C7 request reduction + jev_recall, C8 fast-jev compaction, proactive
+ * T105 L4 offline: C7 request reduction + jev_recall, C8 fast-jev compaction, proactive
  * compaction at agent_end, and legacy OMP_JEV_* / OMP_TELEMETRY_* compatibility. Fake OMP host,
  * fake Jev (injected fetch), archives in a temp dir; no real model, Jev, ~/.omp or ~/.pi.
  */
@@ -90,7 +90,7 @@ function fakeHost(): Host {
     on: (event, handler) => { handlers.set(event, [...(handlers.get(event) ?? []), handler]); },
     registerCommand: (name: string, options: { description?: string }) => { commands.set(name, { name, source: "extension" as const, description: options.description }); },
     registerTool: (tool) => { host.tools.set(tool.name, tool); },
-    // Own tools carry this package as source (legacy check reads sourceInfo).
+    // Own tools carry this package as source (T105 L3 legacy check reads sourceInfo).
     getAllTools: () => [...host.tools.values()].map(({ name }) => ({ name, sourceInfo: { path: join(PACKAGE_ROOT, "src/adapters/omp/index.ts"), source: "extension" as const } })),
     getActiveTools: () => [...host.active],
     getCommands: () => [...commands.values()],
@@ -121,7 +121,7 @@ interface Setup {
 async function setup(config: Record<string, unknown>, options: { answer?: Answer | "fail"; env?: Record<string, string>; storeDir?: (dir: string) => Promise<string> } = {}): Promise<Setup> {
   const dir = await mkdtemp(join(tmpdir(), "omp-l4-"));
   const storeDir = options.storeDir ? await options.storeDir(dir) : join(dir, "store");
-  // C12 effort (default shadow) would add its own Jev request; these tests count C7/C8 traffic only.
+  // C12 effort (T105 L6, default shadow) would add its own Jev request; these tests count C7/C8 traffic only.
   const file = { effort: "off", ...config, context: { storeDir, limits: { recentTurns: 1 }, ...(config.context as object) } };
   const jev = fakeJev(options.answer);
   const events: TelemetryInput[] = [];

@@ -1,4 +1,4 @@
-/** the share export scrubs every configured Jev chain key, not only TYPESAFE_API_KEY. */
+/** T105 L7: the share export scrubs every configured Jev chain key, not only TYPESAFE_API_KEY. */
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

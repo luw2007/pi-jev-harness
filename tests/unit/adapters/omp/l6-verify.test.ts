@@ -1,5 +1,5 @@
 /**
- * Verifier edge cases for `jev_plan`, audit writer + report, effort.
+ * Verifier edge cases for T105 L6: `jev_plan` (C6), audit writer + report (C11), effort (C12).
  * Harness copied from l6-plan-audit-effort.test.ts so the two files stay independent.
  * Tests marked `todo` pin the expected behaviour of reported defects without failing the suite.
  */
@@ -42,8 +42,8 @@ const answerAll = (choices: Record<string, string> = {}): Responder => (body) =>
 function fakeHost(parentSession?: string) {
   const handlers = new Map<string, OmpHandler[]>();
   const tools = new Map<string, OmpToolDefinition>();
-  const commands = new Map<string, { name: string; source: "extension"; description?: string }>();
   const calls: string[] = [];
+  const commandMap = new Map<string, { name: string; source: "extension"; description?: string }>();
   const ctx: OmpContext = {
     model: undefined,
     modelRegistry: { getAvailable: () => [], hasConfiguredAuth: () => true },
@@ -54,8 +54,10 @@ function fakeHost(parentSession?: string) {
   const api: OmpExtensionAPI = {
     pi: { VERSION: "18.3.5" },
     on: (event, handler) => void handlers.set(event, [...(handlers.get(event) ?? []), handler]),
-    registerCommand: (name, options) => void commands.set(name, { name, source: "extension", description: options?.description }),
-    getCommands: () => [...commands.values()],
+    registerCommand: (name, options) => {
+      commandMap.set(name, { name, source: "extension", description: options?.description });
+    },
+    getCommands: () => [...commandMap.values()],
     registerTool: (tool) => void tools.set(tool.name, tool),
     getAllTools: () => [
       { name: "read", description: "Read a file", parameters: { type: "object", properties: {} } },
@@ -111,7 +113,7 @@ function setup(config: Record<string, unknown>, respond: Responder = answerAll()
 const PLAN_ON = { mode: "shadow", outbound: { taskIntent: true }, effort: "off", router: { tools: "off" } };
 const MULTI = "- Inspect source\n- Update implementation";
 
-// ---- strict answers (legacy defaulted partial answers) -------------------------------------
+// ---- C6: strict answers (legacy defaulted partial answers) -------------------------------------
 
 test("jev_plan: partial Jev answer (only mode) returns a usable isError, never throws", async () => {
   // Legacy `jev_route` would return a plan here (agent/model defaulted); jev_plan now requires every answer.
@@ -211,7 +213,7 @@ test("jev_plan: pinnedAgent scout on a non-research slice fails legacy invariant
   assert.match(r.content[0]!.text, /Scout agent can only be assigned to research taskClass/);
 });
 
-// ---- audit writer ------------------------------------------------------------------------
+// ---- C11: audit writer ------------------------------------------------------------------------
 
 test("audit: OMP_TELEMETRY_MAX_BYTES floor and fallbacks match the legacy writer", () => {
   assert.equal(auditMaxBytes({}), 10 * 1024 * 1024);
@@ -300,7 +302,7 @@ test("report: aggregateAudit ignores legacy-foreign lines and matches report.js 
   assert.deepEqual(g.usage.inputTokens, { sum: 5, known: 1, total: 3, coverage: 1 / 3 });
 });
 
-// ---- effort --------------------------------------------------------------------------------
+// ---- C12: effort --------------------------------------------------------------------------------
 
 const EFFORT = { mode: "shadow", outbound: { taskIntent: true } };
 

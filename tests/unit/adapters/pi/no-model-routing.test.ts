@@ -1,5 +1,5 @@
 /**
- * model routing is magpie's. The Pi adapter never asks Jev a model question, never observes
+ * T051: model routing is magpie's. The Pi adapter never asks Jev a model question, never observes
  * or suggests a model, never sets the model or thinking level, and ignores a legacy
  * `router.models` config subtree with one note. Tool routing is unchanged. Fake host only.
  */

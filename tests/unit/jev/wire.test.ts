@@ -210,7 +210,7 @@ test("single-question parsers reject answers carrying extra question ids", () =>
   assert.deepEqual(noul, { ok: false, error: { kind: "question_id_mismatch" } });
 });
 
-test("T105 L7: internal Jev deployment 4-decimal rounding (sum 1.0001) is accepted and renormalized to 1", () => {
+test("T105 L7: bjev 4-decimal rounding (sum 1.0001) is accepted and renormalized to 1", () => {
   const result = parseChoice(choiceResponse({ probabilities: { read: 0.7001, edit: 0.2, ask: 0.1 } }), route, MODEL);
   assert.ok(result.ok, JSON.stringify(result));
   const sum = Object.values(result.value.probabilities).reduce((a, b) => a + b, 0);

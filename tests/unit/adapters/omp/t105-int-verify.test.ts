@@ -1,12 +1,12 @@
 /**
- * integration verification (verifier-owned): every capability on together, including C12
+ * T105 integration verification (verifier-owned): every capability on together, including C12
  * effort (on and the default shadow), through the real OMP entry (`createExtension`) against a fake
  * OMP 18.3.5 host and a fake Jev (injected fetch). Checks the per-task budget contract
  * (./src/adapters/omp/budget.ts), the combined agent_end order, `/jev mode off` mid-task, chain
  * wiring per capability, and the safety invariants (off / child / setModel / setThinkingLevel).
  * No ~/.omp, no ~/.pi, no network.
  *
- * Tests whose name starts with "DEFECT:" reproduce defects found by the integration verifier (fixed in L7).
+ * Tests whose name starts with "DEFECT:" reproduce defects found by the integration verifier (fixed in T105 L7).
  */
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";

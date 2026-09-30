@@ -1,5 +1,5 @@
 /**
- * Verifier round 2 (@ 48732b0): re-checks the round-1 findings through real entry points
+ * Verifier round 2 (T102 @ 48732b0): re-checks the round-1 findings through real entry points
  * where possible (bench/run.ts CLI, runOne with a stub harness root) and pins the report math.
  */
 import assert from "node:assert/strict";
@@ -93,18 +93,18 @@ async function runBench(args: string[], armsFile?: object): Promise<{ status: nu
     await writeFile(join(dir, "arms.json"), JSON.stringify(armsFile));
     extra.push("--arms-file", join(dir, "arms.json"));
   }
-  const r = spawnSync(process.execPath, [join(BENCH, "run.ts"), "--tasks", join(BENCH, "tasks", "smoke", "*.json"), "--out", out, "--models-json", "/nonexistent/models.json", ...extra, ...args], { encoding: "utf8", env: { ...process.env, BENCH_DENY_MODELS: "blocked" } });
+  const r = spawnSync(process.execPath, [join(BENCH, "run.ts"), "--tasks", join(BENCH, "tasks", "smoke", "*.json"), "--out", out, "--models-json", "/nonexistent/models.json", ...extra, ...args], { encoding: "utf8" });
   return { status: r.status, stderr: r.stderr, out };
 }
 
-test("R2-4: rejected arm configs and BENCH_DENY_MODELS hits abort before meta.json (models.json not even read)", async () => {
+test("R2-4: rejected arm configs and deepseek abort before meta.json (models.json not even read)", async () => {
   const A = { id: "A", label: "A", baseline: true, config: { mode: "off" } };
   const cases: [string[], object | undefined, RegExp][] = [
-    [["--provider", "p", "--model", "blocked-chat"], undefined, /blocked/],
-    [["--provider", "blocked", "--model", "x"], undefined, /blocked/],
+    [["--provider", "p", "--model", "deepseek-chat"], undefined, /deepseek/],
+    [["--provider", "deepseek", "--model", "x"], undefined, /deepseek/],
     [["--provider", "p", "--model", "m", "--arms", "A,ON"], { arms: [A, { id: "ON", label: "on", config: { mode: "on" } }] }, /rejected by pi-jev loadConfig/],
     [["--provider", "p", "--model", "m", "--arms", "A,X"], { arms: [A, { id: "X", label: "x", config: { mode: "shadow", unknownField: 1 } }] }, /rejected/],
-    [["--provider", "p", "--model", "m", "--arms", "A,X"], { arms: [A, { id: "X", label: "x", config: { mode: "shadow" }, env: { PI_JEV_X: "relay/Blocked-V4" } }] }, /blocked/],
+    [["--provider", "p", "--model", "m", "--arms", "A,X"], { arms: [A, { id: "X", label: "x", config: { mode: "shadow" }, env: { PI_JEV_X: "relay/DeepSeek-V4" } }] }, /deepseek/],
     [["--provider", "p", "--model", "m", "--arms", "B"], undefined, /baseline/],
   ];
   for (const [args, arms, re] of cases) {

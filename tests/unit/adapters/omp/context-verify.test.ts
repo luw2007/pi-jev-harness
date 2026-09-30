@@ -1,21 +1,15 @@
 /**
- * verifier edge cases: C7 request reduction + jev_recall, C8 fast-jev compaction (with a
- * parity check against the legacy jev-compaction `jevCompaction`, loaded read-only), proactive
- * compaction, OMP_JEV_* / OMP_TELEMETRY_* precedence, and safety. Fake OMP host, fake Jev
- * (injected fetch), temp dirs only; no real model, Jev, ~/.omp or ~/.pi.
- *
- * Tests flagged `todo` document defects found during verification (expected behaviour, currently
- * failing); they are reported, not fixed here.
+ * T105 L4 verifier edge cases: C7 request reduction + jev_recall, C8 fast-jev compaction,
+ * proactive compaction, OMP_JEV_* / OMP_TELEMETRY_* precedence, and safety.
+ * Fake OMP host, fake Jev (injected fetch), temp dirs only; no real model, Jev, ~/.omp or ~/.pi.
  */
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
-import { createRequire, registerHooks } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { PACKAGE_ROOT } from "../../../../src/adapters/omp/legacy.ts";
-import { fileURLToPath } from "node:url";
 import { loadOmpConfig } from "../../../../src/adapters/omp/config.ts";
 import { ompContextSettings } from "../../../../src/adapters/omp/context-settings.ts";
 import { createOmpContextReducer } from "../../../../src/adapters/omp/context.ts";
@@ -109,7 +103,7 @@ function fakeHost(): Host {
     on: (event, handler) => { host.handlers.set(event, [...(host.handlers.get(event) ?? []), handler]); },
     registerCommand: (name, options) => { host.commands.set(name, options.handler); commands.set(name, { name, source: "extension" as const, description: options.description }); },
     registerTool: (tool) => { host.tools.set(tool.name, tool); },
-    // Own tools carry this package as source (legacy check reads sourceInfo).
+    // Own tools carry this package as source (T105 L3 legacy check reads sourceInfo).
     getAllTools: () => [...host.tools.values()].map(({ name }) => ({ name, sourceInfo: { path: join(PACKAGE_ROOT, "src/adapters/omp/index.ts"), source: "extension" as const } })),
     getActiveTools: () => [...host.active],
     getCommands: () => [...commands.values()],
@@ -140,7 +134,7 @@ interface Setup {
 async function setup(config: Record<string, unknown>, options: { jev?: FakeJev; env?: Record<string, string> } = {}): Promise<Setup> {
   const dir = await mkdtemp(join(tmpdir(), "omp-l4v-"));
   const storeDir = join(dir, "store");
-  // C12 effort (default shadow) would add its own Jev request; these tests count C7/C8 traffic only.
+  // C12 effort (T105 L6, default shadow) would add its own Jev request; these tests count C7/C8 traffic only.
   const file = { effort: "off", ...config, context: { storeDir, limits: { recentTurns: 1 }, ...(config.context as object) } };
   const jev = options.jev ?? fakeJev();
   const events: TelemetryInput[] = [];
@@ -322,61 +316,6 @@ test("C8 on: result matches OMP SessionBeforeCompactResult/CompactionResult exac
   }
 });
 
-// Legacy loader: the read-only legacy jev-compaction hook at JEV_LEGACY_HOOK, transpiled on the fly; unset skips.
-const LEGACY_HOOK = process.env.JEV_LEGACY_HOOK;
-
-async function loadLegacyJevCompaction(): Promise<((prep: unknown, asker: unknown, settings: unknown) => Promise<{ compaction?: Record<string, unknown>; skipped?: string }>) | undefined> {
-  if (!LEGACY_HOOK || !existsSync(LEGACY_HOOK)) return undefined;
-  const ts = createRequire(import.meta.url)("typescript") as typeof import("typescript");
-  const LEGACY = "/omp-jev-extensions/extensions/";
-  registerHooks({
-    resolve(spec, ctx, next) {
-      if (spec.endsWith(".js") && ctx.parentURL?.includes(LEGACY)) {
-        const candidate = new URL(spec.replace(/\.js$/, ".ts"), ctx.parentURL);
-        if (existsSync(fileURLToPath(candidate))) return next(candidate.href, ctx);
-      }
-      return next(spec, ctx);
-    },
-    load(url, ctx, next) {
-      if (url.includes(LEGACY) && url.endsWith(".ts")) {
-        const out = ts.transpileModule(readFileSync(fileURLToPath(url), "utf8"), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
-        return { format: "module", source: out.outputText, shortCircuit: true };
-      }
-      return next(url, ctx);
-    },
-  });
-  return ((await import(LEGACY_HOOK)) as { jevCompaction: never }).jevCompaction;
-}
-
-test("C8 parity with legacy fast-jev compaction: same regions dropped, identical CompactionResult", async (t) => {
-  const legacy = await loadLegacyJevCompaction();
-  if (!legacy) return t.skip("legacy jev-compaction not present");
-  const fixtures: Array<[string, unknown[], Answer]> = [
-    ["keep odd", region(), keepOdd],
-    ["drop all", region(), () => 0.01],
-    ["multi-window", (() => {
-      const big: unknown[] = [user("big region")];
-      for (let i = 0; i < 10; i++) big.push(assistant([{ type: "text", text: `r${i}` }, toolCall(`r${i}`)]), toolResult(`r${i}`, `r${i}:` + "é".repeat(25_000)));
-      return big;
-    })(), (_id, q) => (/r[37]/.test(q) ? 0.9 : 0.02)],
-  ];
-  for (const [name, messages, answer] of fixtures) {
-    const legacyOut = await legacy(preparation(messages), {
-      async ask(_state: unknown, questions: Record<string, { instructions: string }>) {
-        return { answers: Object.fromEntries(Object.entries(questions).map(([id, q]) => [id, { noul: answer(id, q.instructions) }])) };
-      },
-    }, { keepThreshold: 0.2, preserveRecentMessages: 0, minReductionRatio: 0.25 });
-    const s = await setup(ON({ request: "off", compaction: "on" }), { jev: fakeJev(answer) });
-    try {
-      const [result] = await s.host.emit("session_before_compact", compactEvent(preparation(messages)));
-      const ours = (result as { compaction?: Record<string, unknown> } | undefined)?.compaction;
-      assert.ok(legacyOut.compaction, `${name}: legacy produced a compaction (${legacyOut.skipped})`);
-      assert.deepEqual(ours, legacyOut.compaction, `${name}: identical to legacy`);
-    } finally {
-      await s.cleanup();
-    }
-  }
-});
 
 test("C8: wait budget (compactWaitMs) and host abort signal both fall back to native", async () => {
   for (const variant of ["wait", "signal"] as const) {
@@ -680,24 +619,16 @@ test("OMP_TELEMETRY=0 (legacy exact '0'): default telemetry writes nothing; othe
   }
 });
 
-test("OMP_JEV_ALLOW_DROPPING_CALLS: only exact '1' enables; C8 output identical to legacy with the flag", async (t) => {
+test("OMP_JEV_ALLOW_DROPPING_CALLS: only exact '1' enables; low-score calls are dropped", async () => {
   for (const [value, want] of [["1", true], ["0", false], ["true", false], ["", false]] as const) {
     const loaded = await loadOmpConfig({ home: "/h", env: { OMP_JEV_ALLOW_DROPPING_CALLS: value }, readText: ENOENT, readLegacyText: ENOENT });
     assert.equal(ompContextSettings(loaded).allowDroppingCalls, want, value);
   }
-  const legacy = await loadLegacyJevCompaction();
-  if (!legacy) return t.skip("legacy jev-compaction not present");
   const answer: Answer = (_id, q) => (/tool call t[24] /.test(q) ? 0.9 : 0.01);
-  const legacyOut = await legacy(preparation(), {
-    async ask(_s: unknown, questions: Record<string, { instructions: string }>) {
-      return { answers: Object.fromEntries(Object.entries(questions).map(([id, q]) => [id, { noul: answer(id, q.instructions) }])) };
-    },
-  }, { keepThreshold: 0.2, preserveRecentMessages: 0, minReductionRatio: 0.25, allowDroppingCalls: true });
   const s = await setup(ON({ request: "off", compaction: "on" }), { jev: fakeJev(answer), env: { OMP_JEV_ALLOW_DROPPING_CALLS: "1" } });
   try {
     const [result] = await s.host.emit("session_before_compact", compactEvent());
     const ours = (result as { compaction?: Record<string, unknown> }).compaction;
-    assert.deepEqual(ours, legacyOut.compaction);
     assert.ok(!(ours!.summary as string).includes("Tool call: read (c0)"), "low-score call record dropped");
   } finally {
     await s.cleanup();

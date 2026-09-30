@@ -1,10 +1,10 @@
-/** Verifier checks for bench has no model-routing arm; the optional model denylist covers config and env. */
+/** Verifier checks for T104: bench has no model-routing arm; deepseek refusal still covers config and env. */
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { checkArm, checkModel, denyList } from "./arms.ts";
+import { checkArm, checkModel } from "./arms.ts";
 import type { BenchArm } from "./types.ts";
 
 const BENCH = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -21,18 +21,14 @@ test("T104 arms.json: exactly A, AA, B, C, D, E; no arm M; no router.models anyw
   assert.doesNotMatch(raw, /"models"|\bM\b.*模型路由/);
 });
 
-test("BENCH_DENY_MODELS refusal: anywhere in arm config, any case, and in arm env; empty by default", async () => {
-  const deny = denyList({ BENCH_DENY_MODELS: " Blocked , other" });
-  assert.deepEqual(deny, ["blocked", "other"]);
-  assert.deepEqual(denyList({}), []);
+test("T104 deepseek refusal: anywhere in arm config, any case, and in arm env", async () => {
   const cases: BenchArm[] = [
-    { id: "X", label: "x", config: { mode: "shadow", jev: { url: "https://Blocked.example/v1" } } },
-    { id: "X", label: "x", config: { mode: "shadow", router: { models: { allow: ["relay/blocked-v4"] } } } },
-    { id: "X", label: "x", config: { mode: "shadow" }, env: { SOME_VAR: "BLOCKED" } },
-    { id: "X", label: "x", config: { mode: "shadow" }, env: { BLOCKED_API_KEY: "k" } },
+    { id: "X", label: "x", config: { mode: "shadow", jev: { url: "https://DeepSeek.example/v1" } } },
+    { id: "X", label: "x", config: { mode: "shadow", router: { models: { allow: ["relay/deepseek-v4"] } } } },
+    { id: "X", label: "x", config: { mode: "shadow" }, env: { SOME_VAR: "DEEPSEEK" } },
+    { id: "X", label: "x", config: { mode: "shadow" }, env: { DEEPSEEK_API_KEY: "k" } },
   ];
-  for (const arm of cases) assert.match((await checkArm(arm, deny)) ?? "", /blocked/i, JSON.stringify(arm));
-  assert.match(checkModel("relay", "Blocked-V4", deny) ?? "", /blocked/i);
-  assert.match(checkModel("blocked", "x", deny) ?? "", /blocked/i);
-  assert.equal(checkModel("blocked", "x", []), null);
+  for (const arm of cases) assert.match((await checkArm(arm)) ?? "", /deepseek/i, JSON.stringify(arm));
+  assert.match(checkModel("relay", "DeepSeek-V4") ?? "", /deepseek/i);
+  assert.match(checkModel("deepseek", "x") ?? "", /deepseek/i);
 });

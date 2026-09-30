@@ -1,5 +1,5 @@
 /**
- * Real Pi host test for the action harness: the installed `pi` runs the adapter in shadow
+ * Real Pi host test for the action harness (T016): the installed `pi` runs the adapter in shadow
  * on a fresh temp git repository per task — one JS module with an off-by-one bug and a failing
  * `node --test` test — against a local fake Jev that answers action reviews with permit, accepts the
  * completion `done` Choice, and answers the continuation done/autonomous Noul as not done and not
@@ -7,7 +7,7 @@
  *   (a) explain a function (read); (b) fix the bug (edit); (c) add a helper and its test (create);
  *   (d) run the tests and report (check); plus one enforced(create) run asked to overwrite a file.
  *
- * Model: one cheap model, `--model` pinned. Pi has no `--max-time` flag, so
+ * Model: one cheap non-deepseek model (T009b's), `--model` pinned. Pi has no `--max-time` flag, so
  * each run gets a wall-clock limit here and is killed when it runs over. Model requests are capped
  * per run (MAX_MODEL_REQUESTS / number of runs): a run is killed before it can make one more, so the
  * total can never exceed MAX_MODEL_REQUESTS. HOME is a temp directory whose models.json holds only
@@ -24,8 +24,8 @@ import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
 
-// PI_JEV_HOST_PROVIDER / PI_JEV_HOST_MODEL override the pinned model when its upstream is down.
-const PROVIDER = process.env.PI_JEV_HOST_PROVIDER ?? "openrouter";
+// PI_JEV_HOST_PROVIDER / PI_JEV_HOST_MODEL override the pinned model when its upstream is down (T040).
+const PROVIDER = process.env.PI_JEV_HOST_PROVIDER ?? "gcloud";
 const MODEL_ID = process.env.PI_JEV_HOST_MODEL ?? "google/gemini-3-flash";
 const MODEL = `${PROVIDER}/${MODEL_ID}`;
 const FAKE_KEY = "fake-typesafe-key-for-host-test";
@@ -172,9 +172,10 @@ interface PiRun {
 
 function runPi(home: string, cwd: string, extraEnv: Record<string, string>, prompt: string, before: string[] = []): Promise<PiRun> {
   const args = ["-p", "--no-session", "--mode", "json", "--extension", EXTENSION, "--model", MODEL, ...before, prompt];
+  assert.ok(!args.some((arg) => /deepseek/i.test(arg)));
   const env: NodeJS.ProcessEnv = { ...process.env, HOME: home, TYPESAFE_API_KEY: FAKE_KEY, ...extraEnv };
   delete env.PI_CODING_AGENT_DIR;
-  // inherited from this runner, it makes every nested `node --test` exit 0 (child reporter mode).
+  // T040: inherited from this runner, it makes every nested `node --test` exit 0 (child reporter mode).
   delete env.NODE_TEST_CONTEXT;
   const child = spawn("pi", args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
   let stdout = "", stderr = "", timedOut = false, overBudget = false, scanned = 0, requests = 0;
@@ -266,7 +267,7 @@ async function runTask(jev: FakeJev, runsDir: string, cleanup: string[], name: s
   const home = await prepareHome(enforce);
   cleanup.push(repo, home);
   const before = jev.reviews.length;
-  // shadow never blocks and config refuses mode on, so the enforced run
+  // T046: since T044 (H1) shadow never blocks and config refuses mode on, so the enforced run
   // switches the session to on first; the other runs stay in the config's shadow.
   const run = await runPi(home, repo, { PI_JEV_URL: jev.url, PI_JEV_RUNS_DIR: runsDir, PI_JEV_RUN_ID: runId }, prompt, enforce.length > 0 ? ["/jev mode on"] : []);
   const dirs = (await readdir(runsDir)).filter((dir) => dir.startsWith(runId));
@@ -278,6 +279,7 @@ async function runTask(jev: FakeJev, runsDir: string, cleanup: string[], name: s
   const isContinuation = (r: Receipt) => r.receipt.actionId.startsWith("continuation_");
   const ends = toolEnds(run.events);
   const messages = assistantMessages(run.events);
+  for (const message of messages) assert.ok(!/deepseek/i.test(`${message.provider}/${message.model}`));
   assert.ok(messages.every((m) => m.provider === PROVIDER && m.model === MODEL_ID), `${name}: model stays ${MODEL}`);
   return {
     name,

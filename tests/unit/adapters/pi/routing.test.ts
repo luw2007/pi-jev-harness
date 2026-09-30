@@ -1,5 +1,5 @@
 /**
- * tool routing applied in mode `on`, `jev_route`, router feature modes and their status lines.
+ * T037: tool routing applied in mode `on`, `jev_route`, router feature modes and their status lines.
  * Fake host only: `setActiveTools` follows Pi (registered names only) unless a test overrides it.
  */
 import assert from "node:assert/strict";
@@ -71,7 +71,7 @@ test("on + router.tools on applies the routed bundle before the run, verifies it
   try {
     const results = await fake.emit("before_agent_start", { prompt: TASK });
     assert.deepEqual(results, [undefined], "no prompt or message change");
-    // Root edit + prerequisite read + resident read/search and exec tools, in host order; only write removed (bash stays).
+    // Root edit + prerequisite read + resident read/search and exec tools, in host order; only write removed (T045 E2: bash stays).
     assert.deepEqual(fake.setActiveToolsArgs, [["read", "bash", "edit", "grep"]]);
     assert.deepEqual(fake.active(), ["read", "bash", "edit", "grep"]);
     assert.equal(jev.requests.length, 1, "only the tool question");
@@ -225,7 +225,7 @@ test("legacy boolean router.tools still loads, mapped to modes; per-feature on i
   assert.deepEqual([legacyOn.source, legacyOn.config.router.tools, legacyOn.notes], ["file", "shadow", undefined]);
   const legacyOff = await load({ router: { tools: false } });
   assert.deepEqual([legacyOff.source, legacyOff.config.router.tools], ["file", "off"]);
-  // any router.models content (even formerly invalid) is ignored, never parsed.
+  // T051: any router.models content (even formerly invalid) is ignored, never parsed.
   for (const models of [{ mode: "on", providerPriority: ["p2", "p1"] }, { enabled: true }, { mode: "on", enabled: true }, { providerPriority: ["p/x"] }, "junk"]) {
     const loaded = await load({ router: { tools: "on", models } });
     assert.deepEqual([loaded.source, loaded.config.router, loaded.notes], ["file", { tools: "on" }, [MODEL_ROUTING_IGNORED_NOTE]], JSON.stringify(models));
@@ -258,7 +258,7 @@ test("status shows the tool routing state and the magpie model line; the model i
   } finally { for (const s of [on, legacy, off]) await s.h.cleanup(); }
 });
 
-// ---- this extension's own tools stay resident; jev_recall is active only in effective on ----
+// ---- T044: this extension's own tools stay resident; jev_recall is active only in effective on ----
 
 const JEV_OWN = ["jev_acceptance_gate", "foreman_assess", "jev_route"];
 const JEV_INFOS: ToolInfo[] = JEV_OWN.map((name) => ({

@@ -38,9 +38,9 @@ export interface RunResult {
   changes: RunJson["changes"];
   verification: RunJson["verification"];
   verificationWaiver?: RunJson["verificationWaiver"];
-  /** Structured completion state from `run.json`; null without it or when the adapter recorded none. */
+  /** Structured completion state from `run.json` (T036); null without it or when the adapter recorded none. */
   completion: NonNullable<RunJson["completion"]> | null;
-  /** Routing outcomes from `run.json`; omitted when absent. */
+  /** Routing outcomes from `run.json` (T045); omitted when absent. */
   routing?: RunJson["routing"];
   /** Blocking, failure, or stop reasons from `run.json`, then the CLI's own (timeout, session error, cleanup warnings, missing products). */
   reasons: string[];

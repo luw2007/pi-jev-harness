@@ -14,7 +14,7 @@ node bench/report.ts /tmp/bench-out
 node bench/smoke-offline.ts /tmp/bench-smoke [--arms A,AA,B,D] [--repeat 1]
 ```
 
-- 启动前检查（任何一项失败都在写 meta.json 之前退出 1）：模型名或 provider 命中 `BENCH_DENY_MODELS`（逗号分隔、不区分大小写的子串，默认为空）时拒绝；每个臂的配置都用产品的 `loadConfig`（`src/adapters/pi/config.ts`，只读导入）解析，被拒绝的配置（例如 `mode: "on"`、未知字段）直接报错，不会悄悄按 off 跑；臂配置或环境里命中该列表也拒绝。
+- 启动前检查（任何一项失败都在写 meta.json 之前退出 1）：模型名含 `deepseek` 拒绝；每个臂的配置都用产品的 `loadConfig`（`src/adapters/pi/config.ts`，只读导入）解析，被拒绝的配置（例如 `mode: "on"`、未知字段）直接报错，不会悄悄按 off 跑；臂配置或环境里出现 deepseek 也拒绝。
 - `--models-json` 只读：bench 复制其中一个 provider 块（只保留指定模型）。`apiKey` 为 `!command` 时在启动时用真实环境执行一次，只通过 `BENCH_MODEL_API_KEY` 交给 `pi-jev run`；`$NAME` 形式只传这一个变量。
 - 子进程环境只保留 `PATH/TMPDIR/LANG/LC_*/TERM/USER/LOGNAME/SHELL/TZ`，其余（各种 API key）一律不传。验收命令拿不到模型 key 和 Jev key。
 - `--jev fake`（默认）：每次运行一个本地假 Jev（全部 503 并计数）。`--jev real` 才用真实 Jev。
@@ -42,7 +42,7 @@ node bench/smoke-offline.ts /tmp/bench-smoke [--arms A,AA,B,D] [--repeat 1]
 | 输入/输出 token | Pi 会话日志中每次 assistant 尝试的 `usage`；任一次缺失即为 null | 可用 |
 | 模型请求数（含报错） | Pi 会话日志中 assistant 消息数 | 可用 |
 | 费用 | 会话日志 `usage.cost.total`；模型块没有单价时整体标为不可用，不参与比较 | 同左 |
-| run.json 状态、“错误宣称完成”、用量交叉核对 | `run.json`（存在时才用） | **不可用**：mode off 不写 run.json，结果类别为 `native_off`（CLI 明确返回），这些字段不参与与 A 的比较 |
+| run.json 状态、“错误宣称完成”、用量交叉核对 | `run.json`（存在时才用） | **不可用**：mode off 不写 run.json，结果类别为 `native_off`（CLI 明确返回，T039），这些字段不参与与 A 的比较 |
 
 会话日志中无法解析的行（如被 kill 截断）跳过并计入 `malformedLogLines`。
 
@@ -65,7 +65,7 @@ node bench/smoke-offline.ts /tmp/bench-smoke [--arms A,AA,B,D] [--repeat 1]
 | D | shadow + `context.request: shadow` | 请求级 context shadow |
 | E | shadow + 工具路由 + 续跑 + context | 组合 |
 
-模型选择由 magpie 网关负责，bench 不再有模型路由臂。
+模型选择由 magpie 网关负责（T104），bench 不再有模型路由臂。
 
 ## 建议的 `bench:offline` 接线（package.json 归另一会话所有，本单不改）
 

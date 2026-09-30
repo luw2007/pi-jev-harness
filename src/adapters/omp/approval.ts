@@ -1,5 +1,5 @@
 /**
- * human approval of risky tool calls and the silent-tools steer reminder, with the
+ * T105 C3: human approval of risky tool calls and the silent-tools steer reminder, with the
  * semantics of the legacy `jev-autorun` plugin (read-only reference), behind `approval.*` config.
  *
  * Approval (`approval.enabled`, default off), at `tool_call`:

@@ -1,6 +1,6 @@
 export const VERSION = "0.0.0";
 
-// model routing (models.ts, window.ts, types.ts) was removed; model selection is magpie's.
+// T051: model routing (models.ts, window.ts, types.ts) was removed; model selection is magpie's.
 
 export { prepareToolExposure, routeToolsForTask, snapshotToolCatalog } from "./tools.ts";
 export type {

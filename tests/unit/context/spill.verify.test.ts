@@ -1,4 +1,4 @@
-// verification: edge cases for src/context/spill.ts beyond the builder tests.
+// T030 verification: edge cases for src/context/spill.ts beyond the T025 builder tests.
 import assert from "node:assert/strict";
 import { chmod, mkdir, mkdtemp, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

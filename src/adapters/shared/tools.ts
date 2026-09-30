@@ -1,8 +1,8 @@
 // Routing question text adapted from jev-harness@44a4e3a17013b6458efd4cc2b3e8ca45efae60b8:examples/host/jev-choice.ts (MIT)
 /**
- * Host-neutral Jev-backed tool chooser. Jev only ever receives the task intent (≤16000 chars)
+ * Host-neutral Jev-backed tool chooser (T042). Jev only ever receives the task intent (≤16000 chars)
  * and tool names/descriptions — never file contents or message history. Model routing was removed
- *: model selection is magpie's.
+ * (T051): model selection is magpie's.
  * Must not import host packages (enforced by tests/unit/adapters/shared/shared.test.ts).
  */
 import type { JevClient } from "../../jev/index.ts";

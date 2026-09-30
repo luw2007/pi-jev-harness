@@ -3,6 +3,7 @@
     "id": "R",
     "name": "typesafe-router",
     "url": "https://github.com/TypeSafeAI/typesafe-router",
+    "local_path": null,
     "pinned_commit": "4c6855ccfc92ff0e40a71661685c9ead327a3715",
     "current_head": "4c6855ccfc92ff0e40a71661685c9ead327a3715",
     "license": "UNKNOWN",
@@ -17,6 +18,7 @@
     "id": "H",
     "name": "jev-harness",
     "url": "https://github.com/TypeSafeAI/jev-harness",
+    "local_path": null,
     "pinned_commit": "44a4e3a17013b6458efd4cc2b3e8ca45efae60b8",
     "current_head": "44a4e3a17013b6458efd4cc2b3e8ca45efae60b8",
     "license": "MIT",
@@ -167,7 +169,7 @@
           "vendor/jev-harness/src/contract/validate.ts",
           "vendor/jev-harness/src/audit/receipt.ts"
         ],
-        "change": "相对 import/export 说明符补扩展名 .ts（原文无扩展名，如 \"./types\" → \"./types.ts\"），以便 Node 22 原生 TS 直跑；无逻辑改动。contract/diff.ts、contract/input.ts、contract/types.ts byte 一致。运行时依赖 zod@4.6.5（与 H 锁定版本一致）。"
+        "change": "T011a：相对 import/export 说明符补扩展名 .ts（原文无扩展名，如 \"./types\" → \"./types.ts\"），以便 Node 22 原生 TS 直跑；无逻辑改动。contract/diff.ts、contract/input.ts、contract/types.ts 字节一致。运行时依赖 zod@4.6.5（与 H 锁定版本一致）。"
       }
     ]
   },
@@ -175,12 +177,13 @@
     "id": "O",
     "name": "omp-jev-extensions",
     "url": "https://github.com/luw2007/omp-jev-extensions",
+    "local_path": null,
     "pinned_commit": "0f93c809c2088c61fab4e613807e515ff9e65b1a",
     "current_head": "89c5825a39f3fe1d29df328d7965d5d9e119e724",
     "license": "MIT",
     "license_path": "third_party/licenses/omp-jev-extensions.LICENSE",
     "vendored": false,
-    "notes": "来源说明：改编代码来自同一作者的 MIT 许可作品 omp-jev-extensions 在 commit 0f93c809c2088c61fab4e613807e515ff9e65b1a 的版本；该 commit 未公开发布，公开仓库 https://github.com/luw2007/omp-jev-extensions 中没有包含这些改编代码的 commit。许可文本见 license_path。未 vendor，仅改编（adapted only）：src/ 中的目标文件是重写后的实现，文件头注明来源，不与 O byte 一致，不做三方 diff；同步上游时不覆盖。files 每项为「O 源文件 → 目标文件 → O 源文件 sha256（git show 0f93c80:<path>）」。digest 为空：没有逐字复制的文件，目标文件无可核对的一致哈希。LICENSE 复制到 third_party/licenses/omp-jev-extensions.LICENSE（与 O LICENSE sha256 dc692007… 一致）。二级来源：foreman 的十维问题与阈值在 O 中镜像自 thruwire/foreman policy.py，本仓经 O 间接取得，未直接读取 thruwire。未移植：各扩展的工具注册（jev_route、jev_acceptance_gate、foreman_assess 等）、key/env 读取、审计写盘、telemetry 写入调用、模型/effort/工具组 setter、assessCompact。 改编自 all-model-router 的 src/router/{models,window,types}.ts 已随模型路由删除（模型选择由 magpie 负责）。",
+    "notes": "未 vendor，仅改编（adapted only）：src/ 中的目标文件是重写后的实现，文件头注明来源，不与 O 字节一致，不做三方 diff；同步上游时不覆盖。files 每项为「O 源文件 → 目标文件 → O 源文件 sha256（git show 0f93c80:<path>）」。digest 为空：没有逐字复制的文件，目标文件无可核对的一致哈希。LICENSE 复制到 third_party/licenses/omp-jev-extensions.LICENSE（与 O LICENSE sha256 dc692007… 一致）。二级来源：foreman 的十维问题与阈值在 O 中镜像自 thruwire/foreman policy.py，本仓经 O 间接取得，未直接读取 thruwire。未移植：各扩展的工具注册（jev_route、jev_acceptance_gate、foreman_assess 等）、key/env 读取、审计写盘、telemetry 写入调用、模型/effort/工具组 setter、assessCompact。current_head 于 2026-09-28 离线读取本机副本；HEAD 已从固定版本前进，改编仍以固定版本为准。 T051：改编自 all-model-router 的 src/router/{models,window,types}.ts 已随模型路由删除（模型选择由 magpie 负责）。",
     "files": [
       "extensions/telemetry/writer.js → src/telemetry/writer.ts → c8f9ff4a53faf19989761d33249689feb8f8d090815b612bca5bddb516a46cb6",
       "extensions/telemetry/report.js → src/telemetry/report.ts → 36a3639de6762e29c8f604e599fe4da35cb9d4858ddd9b5253056aa5fdc1b118",
@@ -196,35 +199,35 @@
           "src/telemetry/writer.ts"
         ],
         "source": "extensions/telemetry/writer.js",
-        "change": "非法类目整条拒收（原为替换字符）；指标白名单改为 tokens{input,output,cacheRead,cacheWrite}+costUsd，未知为 null；去掉 env/homedir/pid，改为注入 dir/now/fs；轮转改为递增序号不覆盖（O 只保留 .1）；新增 run/decision/attempt 关联与诊断计数；保留 fail-open。"
+        "change": "T008：非法类目整条拒收（原为替换字符）；指标白名单改为 tokens{input,output,cacheRead,cacheWrite}+costUsd，未知为 null；去掉 env/homedir/pid，改为注入 dir/now/fs；轮转改为递增序号不覆盖（O 只保留 .1）；新增 run/decision/attempt 关联与诊断计数；保留 fail-open。"
       },
       {
         "files": [
           "src/telemetry/report.ts"
         ],
         "source": "extensions/telemetry/report.js",
-        "change": "保留最近秩分位数与 known=0 时 sum 为 null；p95 换成 p50/p90/p99；分组改为 kind/outcome；新增 attempt 去重、读全部轮转文件、逐行白名单复核；去掉 CLI 与缓存/字符指标。"
+        "change": "T008：保留最近秩分位数与 known=0 时 sum 为 null；p95 换成 p50/p90/p99；分组改为 kind/outcome；新增 attempt 去重、读全部轮转文件、逐行白名单复核；去掉 CLI 与缓存/字符指标。"
       },
       {
         "files": [
           "src/harness/completion.ts"
         ],
         "source": "extensions/acceptance-gate/stop-jev.ts：runAcceptanceGate",
-        "change": "拆开 stopAllowed 与 completionStatus；服务失败从 accepted:true 改为 unavailable；先判宿主证据再问 Jev，问题改为评判宿主证据；去掉 key、env、审计写盘、telemetry、fetch，经注入 ask 走 src/jev；支持取消；拒绝时返回具体缺口。"
+        "change": "T020：拆开 stopAllowed 与 completionStatus；服务失败从 accepted:true 改为 unavailable；先判宿主证据再问 Jev，问题改为评判宿主证据；去掉 key、env、审计写盘、telemetry、fetch，经注入 ask 走 src/jev；支持取消；拒绝时返回具体缺口。"
       },
       {
         "files": [
           "src/harness/completion.ts"
         ],
         "source": "extensions/foreman/foreman.ts：NOUL_QUESTIONS、THRESHOLDS、decide、runForemanAssess",
-        "change": "十维问题文本与阈值原样保留；decide 顺序与阈值不变，只接受校验后的分数；删除 ?? 0 + clamp01 与 emptyScores，缺维返回 invalid；服务失败从 fail-open CONTINUE 改为 unavailable；动作映射到 CompletionResult 并叠加宿主证据缺口。"
+        "change": "T020：十维问题文本与阈值原样保留；decide 顺序与阈值不变，只接受校验后的分数；删除 ?? 0 + clamp01 与 emptyScores，缺维返回 invalid；服务失败从 fail-open CONTINUE 改为 unavailable；动作映射到 CompletionResult 并叠加宿主证据缺口。"
       },
       {
         "files": [
           "src/harness/continuation.ts"
         ],
         "source": "extensions/jev-autorun/jev-autorun.ts：createAutorunExtension 闭包 assessStop、probability、常量 CONTINUATION",
-        "change": "保留 done/autonomous 双条件、0.8 阈值、最多两次续跑、取消/待处理消息/后台任务即停、Jev 失败不续跑；闭包状态改为纯函数输入输出；新增预算、审批/外部阻塞、代次与模式对比、未完成动作条件；固定续跑提示改为由具体动作生成；不移植 askJev、审计/telemetry、配置加载、setter、assessCompact。"
+        "change": "T021：保留 done/autonomous 双条件、0.8 阈值、最多两次续跑、取消/待处理消息/后台任务即停、Jev 失败不续跑；闭包状态改为纯函数输入输出；新增预算、审批/外部阻塞、代次与模式对比、未完成动作条件；固定续跑提示改为由具体动作生成；不移植 askJev、审计/telemetry、配置加载、setter、assessCompact。"
       }
     ]
   },
@@ -232,12 +235,13 @@
     "id": "C",
     "name": "omp-jev-compaction",
     "url": "https://github.com/jerryfane/omp-jev-compaction",
+    "local_path": null,
     "pinned_commit": "e21ab3273542a07984c4f2cfc4b3e746dc95930c",
     "current_head": "e21ab3273542a07984c4f2cfc4b3e746dc95930c",
     "license": "MIT",
     "license_path": "third_party/licenses/omp-jev-compaction.LICENSE",
     "vendored": true,
-    "notes": "保留外层 MIT 与 fast-jev 内核来源。外层 LICENSE 复制到 vendor/fast-jev/LICENSE；内核源码记在 fast-jev 项。C 的外层集成代码（context/hook/asker/map/render/spill/cache-guard）未 vendor。",
+    "notes": "保留外层 MIT 与 fast-jev 内核来源。T023：外层 LICENSE 复制到 vendor/fast-jev/LICENSE；内核源码记在 fast-jev 项。C 的外层集成代码（context/hook/asker/map/render/spill/cache-guard）未 vendor。",
     "files": [
       "LICENSE → vendor/fast-jev/LICENSE → 06dcddbb6908a0c6dd4a9e8ec822eea41d5a460a53089fecccc8a68049e99241 → 06dcddbb6908a0c6dd4a9e8ec822eea41d5a460a53089fecccc8a68049e99241"
     ],
@@ -255,14 +259,16 @@
     "id": "fast-jev",
     "name": "fast-jev-compaction",
     "url": "https://github.com/jerryfane/omp-jev-compaction",
+    "local_path": null,
     "pinned_commit": "e21ab3273542a07984c4f2cfc4b3e746dc95930c",
     "current_head": "e21ab3273542a07984c4f2cfc4b3e746dc95930c",
     "license": "MIT",
     "license_path": "third_party/licenses/fast-jev.LICENSE",
     "vendored": true,
-    "notes": "files/digest 的 sha256_source 是 C（jerryfane/omp-jev-compaction）@e21ab3273542a07984c4f2cfc4b3e746dc95930c 中 src/vendor/fast-jev/* 的哈希（git show 读取），路径相对 C 仓库根；即 C 的本地打补丁副本，不是上游原文。上游 tamaratran/fast-jev-compaction@e3f262a7f4d42bd8dd32ced30d26176f7cb545b0 仅作来源记录，见 upstream 字段；本机有上游副本，已离线对照（git diff --no-index --numstat，上游 src/<f> 对 C 副本）。",
+    "notes": "T029 修正：files/digest 的 sha256_source 是 C（jerryfane/omp-jev-compaction）@e21ab3273542a07984c4f2cfc4b3e746dc95930c 中 src/vendor/fast-jev/* 的哈希（git show 读取），路径相对 C 仓库根；即 C 的本地打补丁副本，不是上游原文。上游 tamaratran/fast-jev-compaction@e3f262a7f4d42bd8dd32ced30d26176f7cb545b0 仅作来源记录，见 upstream 字段；本机有上游副本，已离线对照（git diff --no-index --numstat，上游 src/<f> 对 C 副本）。",
     "upstream": {
       "url": "https://github.com/tamaratran/fast-jev-compaction",
+      "local_path": null,
       "commit": "e3f262a7f4d42bd8dd32ced30d26176f7cb545b0",
       "current_head": "e3f262a7f4d42bd8dd32ced30d26176f7cb545b0",
       "compared_offline": true,
@@ -366,7 +372,7 @@
           "vendor/fast-jev/request.ts",
           "vendor/fast-jev/state.ts"
         ],
-        "change": "相对 import 说明符扩展名 .js → .ts（compact.ts 第 1、2、16 行，request.ts 第 1 行，state.ts 第 11 行），以便 Node 22 原生 TS 直跑与 tsc allowImportingTsExtensions；无逻辑改动。types.ts、LICENSE.upstream、UPSTREAM_COMMIT byte 一致。无运行时依赖（仅 node:crypto）。"
+        "change": "T023：相对 import 说明符扩展名 .js → .ts（compact.ts 第 1、2、16 行，request.ts 第 1 行，state.ts 第 11 行），以便 Node 22 原生 TS 直跑与 tsc allowImportingTsExtensions；无逻辑改动。types.ts、LICENSE.upstream、UPSTREAM_COMMIT 字节一致。无运行时依赖（仅 node:crypto）。"
       }
     ]
   },
@@ -374,12 +380,13 @@
     "id": "typesafe-playground",
     "name": "typesafe-playground",
     "url": "https://github.com/TypeSafeAI/typesafe-playground",
+    "local_path": null,
     "pinned_commit": "6fe5967dc020521a0731682b06c4d8eeeab95ffb",
     "current_head": null,
-    "license": "MIT",
-    "license_path": "third_party/licenses/typesafe-playground.LICENSE",
+    "license": "UNKNOWN",
+    "license_path": null,
     "vendored": false,
-    "notes": "H 的 contract 二级来源；未复制源码，许可于 pinned_commit 处核对为 MIT。",
+    "notes": "H 的 contract 二级来源；本机无此来源工作副本，未读取 HEAD 或许可。",
     "files": [],
     "digest": [],
     "adaptations": []

@@ -1,5 +1,5 @@
 /**
- * integration: C9 provider chain wired into the OMP adapter (config chain, legacy
+ * T105 integration: C9 provider chain wired into the OMP adapter (config chain, legacy
  * jev-providers.json mapping, single-url fallback), chain secrets in the credential scan, one
  * unit per chain call, jev_plan off, loadMode essential, and the /jev status capability line.
  * Fake OMP host, fake Jev (injected fetch), injected legacy file reader. No ~/.omp, no network.
@@ -130,7 +130,7 @@ test("OMP without jev.providers: the legacy jev-providers.json maps read-only; s
   await s.host.emit("session_start");
   await s.host.emit("before_agent_start", { prompt: PROMPT });
   await s.settled();
-  assert.equal(s.urls[0], "https://jev.example.invalid/v1/systemone");
+  assert.equal(s.urls[0], "https://bjev.example.invalid/v1/systemone");
   const status = await s.host.status();
   assert.match(status, /jev providers=internal -> typesafe -> openrouter source=legacy:\/fake\/omp\/agent\/jev-providers\.json/);
   assert.match(status, /jev chain compact: typesafe -> openrouter/);
@@ -166,7 +166,7 @@ test("jev_plan and jev_recall are essential; jev_plan in mode off says so with z
 test("status shows every capability's effective state and source", async () => {
   const s = setup({ mode: "on", outbound: { taskIntent: true }, router: { tools: "shadow" }, approval: { enabled: true } });
   await s.host.emit("session_start");
-  const line = (await s.host.status()).split("\n").find((l) => l.startsWith("capabilities: "))!;
+  const line = (await s.host.status()).split("\n").find((l) => l.trimStart().startsWith("capabilities: "))!.trimStart();
   for (const name of ["route", "enforce", "approval", "acceptance", "autorun", "context", "compaction", "proactive", "effort", "plan", "jev"])
     assert.match(line, new RegExp(`\\b${name}=\\S+ \\(`), name);
   assert.match(line, /approval=on \(config\)/);
@@ -187,7 +187,7 @@ test("Pi (no legacy path): single-url unless jev.providers is configured", () =>
 test("OMP legacy file with inline api-key: chain source, key only in secrets, never in status", () => {
   const KEY = "sk-FAKEACCESSKEY-0123456789";
   const raw = JSON.stringify({ schemaVersion: 1, default: "internal", fallback: ["typesafe"],
-    providers: { internal: { url: "https://internal.test/v1", model: "jev-internal", "api-key": KEY } } });
+    providers: { internal: { url: "https://internal.test/v1", model: "bjev", "api-key": KEY } } });
   const access = createJevAccess({ config: defaultConfig("/h"), env: {}, legacyProvidersPath: "/legacy.json",
     readFile: () => raw, fileMode: () => 0o100644 });
   assert.equal(access.source.kind, "legacy");

@@ -1,4 +1,4 @@
-// verification: edge cases for `pi-jev run` (src/cli/run.ts, src/cli/main.ts) beyond the builder tests.
+// T030 verification: edge cases for `pi-jev run` (src/cli/run.ts, src/cli/main.ts) beyond the T026 builder tests.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";

@@ -16,7 +16,7 @@
  * chain calls, not `onAttempt` events. Physical requests per call are bounded by the chain length
  * and all of them by `waitMs`.
  */
-import { createJevClient, type JevClient, type JevCallOptions } from "./client.ts";
+import { createJevClient, type JevClient, type JevCallOptions, type JevDebugEvent } from "./client.ts";
 import {
   TYPESAFE_PROFILE,
   type IdentityPolicy,
@@ -144,6 +144,9 @@ export interface JevChainClientOptions {
   limits?: { maxRequestBytes: number; maxResponseBytes: number };
   /** Per physical request, as in `createJevClient`. */
   onAttempt?: (attempt: JevAttempt, providerId: string) => void;
+  /** Physical request/response events from each provider; failures cannot affect calls. */
+  onDebug?: (event: JevDebugEvent) => void;
+  debugEnabled?: () => boolean;
   /** Per chain step, including skipped providers. Throwing cannot change the call result. */
   onChainAttempt?: (attempt: JevChainAttempt) => void;
 }
@@ -196,6 +199,8 @@ export function createJevChainClient(options: JevChainClientOptions): JevClient 
         now,
         newId: options.newId,
         onAttempt: (attempt) => options.onAttempt?.(attempt, spec.id),
+        ...(options.onDebug ? { onDebug: options.onDebug } : {}),
+        ...(options.debugEnabled ? { debugEnabled: options.debugEnabled } : {}),
       });
       const started = now();
       const result = await call(client);

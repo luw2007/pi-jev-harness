@@ -1,6 +1,6 @@
 export const TELEMETRY_SCHEMA_VERSION = 1 as const;
 
-/** `route_model` was removed with model routing; old lines carrying it are skipped. */
+/** `route_model` was removed with model routing (T051); old lines carrying it are skipped. */
 export const TELEMETRY_KINDS = [
   "route_tools",
   "route_plan",
@@ -66,7 +66,7 @@ export const TELEMETRY_SOURCES = [
   // Route withheld before any Jev request.
   "outbound:not_authorized",
   "outbound:credential_detected",
-  // OMP context: C8 compaction applied / recorded only / left to native; proactive
+  // OMP context (T105 L4): C8 compaction applied / recorded only / left to native; proactive
   // compaction started / recorded only; request reduction skipped by the cache guard.
   "compaction:applied",
   "compaction:would_apply",
@@ -78,7 +78,7 @@ export const TELEMETRY_SOURCES = [
   "adapter:duplicate_load",
   // Host version/profile unknown, so adapter capabilities are off.
   "adapter:no_profile",
-  // Legacy @omp-jev/harness present, so the OMP adapter is forced off.
+  // Legacy @omp-jev/harness present, so the OMP adapter is forced off (T105).
   "adapter:legacy_conflict",
 ] as const;
 export type TelemetrySource = (typeof TELEMETRY_SOURCES)[number];

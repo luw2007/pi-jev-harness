@@ -1,4 +1,4 @@
-/** verification (verifier-owned): new audit lines survive the real sanitizer (AUDIT_SCHEMA). */
+/** T105 L7 verification (verifier-owned): new audit lines survive the real sanitizer (AUDIT_SCHEMA). */
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { sanitizeAudit } from "../../../src/telemetry/audit.ts";

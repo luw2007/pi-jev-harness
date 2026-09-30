@@ -1,5 +1,5 @@
 /**
- * Content-free audit log: stop / route / autorun / approval decisions as JSONL.
+ * Content-free audit log (T105 C11): stop / route / autorun / approval decisions as JSONL.
  *
  * Every line is rebuilt from `AUDIT_SCHEMA`: event, outcome and mode must be members of the kind's
  * enums, metrics must be named in the kind's allowlist with the declared type, ids must be

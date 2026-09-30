@@ -52,7 +52,7 @@ export const CREDENTIAL_PATTERNS: readonly RegExp[] = [
 ];
 
 /**
- * A legacy `router.models` subtree (model routing removed; model selection is magpie's) is
+ * A legacy `router.models` subtree (T051: model routing removed; model selection is magpie's) is
  * ignored unread; the file stays valid and this note is reported once in status/doctor.
  */
 export const MODEL_ROUTING_IGNORED_NOTE = "router.models 配置已忽略（模型路由由 magpie 负责）";
@@ -62,7 +62,7 @@ export const MODEL_ROUTING_IGNORED_NOTE = "router.models 配置已忽略（模�
  * file refuses `mode: "on"` unless the host opts in (`LoadConfigOptions.allowModeOn`, OMP only). In `on` a capability changes behavior only when it is enabled in config
  * and its gate is validated (today: `harness.enforce` kinds, `harness.continuation` and
  * `router.tools: "on"`); every other capability behaves exactly as in shadow. Model routing is not
- * handled here at all: model selection is magpie's.
+ * handled here at all (T051): model selection is magpie's.
  */
 export type AdapterMode = "off" | "shadow" | "on";
 
@@ -149,12 +149,12 @@ export interface ContextConfig {
   limits: ContextLimitsConfig;
   /** Archive root; per-session directories live below it. Absolute. */
   storeDir: string;
-  /** OMP-only keys; accepted only with the OMP opt-in, absent under Pi. */
+  /** OMP-only keys (T105 L4); accepted only with the OMP opt-in, absent under Pi. */
   omp?: OmpContextFileConfig;
 }
 
 /**
- * OMP-only `context` keys: C8 compaction, proactive compaction at agent_end, and the
+ * OMP-only `context` keys (T105 L4): C8 compaction, proactive compaction at agent_end, and the
  * fast-jev tunables of the legacy `OMP_JEV_*` variables. Every field is optional here; the OMP
  * adapter resolves env > this file > legacy file > default (`../omp/context-settings.ts`).
  */
@@ -186,7 +186,7 @@ export interface AdapterConfig {
   budget: {
     maxRequestsPerTask: number;
     waitMs: number;
-    /** OMP only: Jev requests per C8 compaction, separate from the task budget. Absent = uncapped (legacy). */
+    /** OMP only (T105 L4): Jev requests per C8 compaction, separate from the task budget. Absent = uncapped (legacy). */
     compactRequests?: number;
     /** OMP only: total wait of one C8 compaction in ms. Absent = the OMP default. */
     compactWaitMs?: number;
@@ -197,10 +197,10 @@ export interface AdapterConfig {
   harness: HarnessConfig;
   /** Request-level context reduction and the separate summary-replacement switch. */
   context: ContextConfig;
-  /** Human approval of risky tool calls (OMP only, C3); Pi refuses the key. */
+  /** Human approval of risky tool calls (OMP only, T105 C3); Pi refuses the key. */
   approval: ApprovalConfig;
   /**
-   * OMP effort suggestion: off (no request) | shadow (default, record only) | on
+   * OMP effort suggestion (T105 C12): off (no request) | shadow (default, record only) | on
    * (setThinkingLevel before the turn). Capped by the session mode: session off → effort off;
    * session shadow → effort at most shadow; only session on lets `on` act. Pi ignores it.
    */
@@ -208,7 +208,7 @@ export interface AdapterConfig {
 }
 
 /**
- * Human approval (legacy `jev-autorun` parity). Off by default. `denyTools` always ask the
+ * Human approval (T105 C3, legacy `jev-autorun` parity). Off by default. `denyTools` always ask the
  * human; `allowTools` never do; any other tool asks when Jev judges it irreversible with
  * probability ≥ `riskThreshold` (or Jev gives no answer). Without a UI (print/RPC), `noUi` decides.
  * `silentSteer` is the separate switch for the "5 silent tool calls" steer reminder.
@@ -555,7 +555,7 @@ export interface LoadConfigOptions extends ConfigLocation {
    * it (Pi's `on` is per session only, `/jev mode on`).
    */
   allowModeOn?: boolean;
-  /** Host opt-in: accept the `approval` section (OMP only, C3); Pi keeps refusing it. */
+  /** Host opt-in: accept the `approval` section (OMP only, T105 C3); Pi keeps refusing it. */
   allowApproval?: boolean;
 }
 

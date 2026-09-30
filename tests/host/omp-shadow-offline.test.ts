@@ -7,8 +7,8 @@
  * Runs: off, shadow (outbound allowed), shadow (outbound default = not allowed), shadow without
  * `--model`, and shadow with a Jev that never answers (the host run must not wait for it).
  *
- * HOME is a temp dir; the child gets a minimal env (no provider keys), so builtin providers
- * have no credentials and cannot be reached.
+ * HOME is a temp dir; the child gets a minimal env (no provider keys), so builtin providers such
+ * as deepseek have no credentials and cannot be reached.
  */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -19,7 +19,6 @@ import type { AddressInfo } from "node:net";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
-import { findOmp } from "./omp-bin.ts";
 
 const PROVIDER = "localscripted";
 const MODEL_ID = "scripted-1";
@@ -27,7 +26,7 @@ const MODEL = `${PROVIDER}/${MODEL_ID}`;
 const PROMPT = "Reply with exactly the single word OK and nothing else. Do not use any tools. marker-7f3a";
 const FAKE_KEY = "fake-typesafe-key-for-omp-offline-host-test";
 const EXTENSION = resolve(import.meta.dirname, "../../src/adapters/omp/index.ts");
-const OMP = findOmp();
+const OMP = "/opt/homebrew/bin/omp";
 
 async function body(request: IncomingMessage): Promise<string> {
   let text = "";
@@ -147,7 +146,7 @@ async function telemetry(home: string) {
   return { text, events: text.split("\n").filter(Boolean).map((line) => JSON.parse(line) as { kind: string; outcome: string; source?: string }) };
 }
 
-test("real omp offline: off / shadow / shadow-without-outbound / shadow-with-hanging-Jev", { timeout: 600_000, skip: OMP ? false : "omp not found: set OMP_BIN or put omp on PATH" }, async () => {
+test("real omp offline: off / shadow / shadow-without-outbound / shadow-with-hanging-Jev", { timeout: 600_000 }, async () => {
   const userCfg = join(homedir(), ".omp", "agent", "config.yml");
   const userCfgMtime = statSync(userCfg).mtimeMs;
   const userHarnessDirExisted = existsSync(join(homedir(), ".omp", "agent", "pi-jev-harness"));
@@ -172,7 +171,7 @@ test("real omp offline: off / shadow / shadow-without-outbound / shadow-with-han
     const off = await run("off", { mode: "off", ...allowed });
     const shadow = await run("shadow", { mode: "shadow", ...allowed });
     const noOutbound = await run("shadow-no-outbound", { mode: "shadow" });
-    // No --model: the only configured model is still used; no model routing.
+    // No --model: the only configured model is still used; no model routing (T104).
     const unpinned = await run("shadow-unpinned", { mode: "shadow", ...allowed }, false);
     jev.state.hang = true;
     const hanging = await run("shadow-hanging-jev", { mode: "shadow", ...allowed, jev: { timeoutMs: 60_000 }, budget: { waitMs: 60_000 } });
@@ -180,7 +179,7 @@ test("real omp offline: off / shadow / shadow-without-outbound / shadow-with-han
     for (const r of [off, shadow, noOutbound, unpinned, hanging]) {
       assert.equal(r.code, 0, `${r.label}: ${r.stderr}`);
       assert.ok(r.calls.length >= 1, `${r.label}: model was called`);
-      assert.ok(r.calls.every((call) => call.model === MODEL_ID), r.label);
+      assert.ok(r.calls.every((call) => call.model === MODEL_ID && !/deepseek/i.test(call.model)), r.label);
       assert.deepEqual(r.rows.map(({ provider, model: m }) => ({ provider, model: m })), off.rows.map(({ provider, model: m }) => ({ provider, model: m })), r.label);
       assert.deepEqual(r.calls.map((c) => c.tools), off.calls.map((c) => c.tools), `${r.label}: same tool set on the wire as off`);
       assert.ok(r.calls.every((c) => c.tools.includes("jev_plan")), `${r.label}: jev_plan is a top-level tool on the wire (loadMode essential)`);
@@ -190,7 +189,7 @@ test("real omp offline: off / shadow / shadow-without-outbound / shadow-with-han
     assert.equal(off.tel.text, "", "off: no telemetry");
     assert.ok(shadow.jevRequests > 0, "shadow: Jev consulted");
     assert.equal(noOutbound.jevRequests, 0, "shadow without outbound.taskIntent: zero Jev");
-    // the session_stop checkpoint records completion `unavailable` (not sent) next to the withheld route.
+    // T105 L3: the session_stop checkpoint records completion `unavailable` (not sent) next to the withheld route.
     assert.ok(noOutbound.tel.events.length > 0 && noOutbound.tel.events.every((e) => e.outcome === "withheld" || (e.kind === "completion" && e.outcome === "unavailable")));
     for (const r of [shadow, unpinned, hanging]) assert.ok(r.tel.events.every((e) => e.kind !== "route_model"), `${r.label}: no model routing (T104)`);
     assert.ok(hanging.jevRequests > 0, "hanging: Jev request was made");

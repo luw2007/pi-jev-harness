@@ -1,5 +1,5 @@
 /**
- * foundation: OMP directories, config `mode: "on"` opt-in, legacy plugin conflict, host port.
+ * T105 L1 foundation: OMP directories, config `mode: "on"` opt-in, legacy plugin conflict, host port.
  */
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
@@ -201,8 +201,8 @@ test("legacy enabled in plugins lock: /jev not registered, forced off, diagnosti
 test("non-own jev_acceptance_gate at session_start: forced off with diagnostic", async () => {
   const host = fakeHost([{ name: "jev_acceptance_gate", sourceInfo: { path: "/legacy/jev-harness/index.ts", source: "extension" } }]);
   const s = load(host, undefined);
--  // The fake exposes tool registries during load; a conflicting legacy tool is detected immediately.
--  assert.deepEqual(host.commands, []);
+  // Load order: jev_recall (L4), /jev, L3 tools, jev_plan (L6); a forced-off session never activates jev_recall.
+  assert.deepEqual(host.commands, ["tool:jev_recall", "jev", "tool:jev_acceptance_gate", "tool:foreman_assess", "tool:jev_route", "tool:jev_plan"]);
   await host.emit("session_start");
   assert.match(s.claim().statusText(), /^Jev: off[\s\S]*legacy conflict: non-own jev_acceptance_gate/);
   assert.ok(s.events.some((event) => event.source === "adapter:legacy_conflict"));

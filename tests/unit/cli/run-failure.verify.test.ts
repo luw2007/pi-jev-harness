@@ -1,5 +1,5 @@
 /**
- * verification of end to end: `pi-jev run` (`main`) drives a session whose events reach
+ * T041 verification of T039 end to end: `pi-jev run` (`main`) drives a session whose events reach
  * the REAL pi-jev extension (`createExtension`) on the fake Pi host, so run.json, receipts and
  * the CLI output come from production code on both sides. No real Pi, Jev, provider or model.
  */

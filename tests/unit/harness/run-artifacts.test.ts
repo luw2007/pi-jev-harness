@@ -252,7 +252,7 @@ test("run.json is written last, after every other product", async () => {
   });
 });
 
-// structured completion and pre-existing workspace changes.
+// T036: structured completion and pre-existing workspace changes.
 test("completion and preexistingChanges are carried into run.json and rendered in summary.md", async () => {
   await withTemp(async (root) => {
     const dir = join(root, "run-1");

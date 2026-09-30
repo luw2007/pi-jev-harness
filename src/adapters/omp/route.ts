@@ -1,5 +1,5 @@
 /**
- * `jev_route` for OMP: the Jev tool-routing suggestion for an intent, same contract as
+ * `jev_route` for OMP (T105 C5): the Jev tool-routing suggestion for an intent, same contract as
  * the Pi tool (`../pi/host.ts` routeTool). Suggestion only: nothing is executed, applied or
  * switched (no setActiveTools, no setModel). Per task: the same intent + candidate set reuses the
  * earlier result (no extra request); every request passes the outbound gate (outbound.taskIntent,

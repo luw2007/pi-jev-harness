@@ -1,18 +1,21 @@
 /**
- * Coexistence with the legacy `@omp-jev/harness` plugin (安全). Both claim the `/jev` command
+ * Coexistence with the legacy `@omp-jev/harness` plugin (T105 安全). Both claim the `/jev` command
  * and the `jev_acceptance_gate` tool, and OMP lets the later loader silently win, so running both
  * would make either one's decisions unreliable. On any sign of the legacy plugin this adapter is
  * forced off, registers none of the shared names, and reports `adapter:legacy_conflict`.
  *
- * The plugins lock is checked at load time. If the host can list registrations then, those
- * are checked too. Real OMP cannot: `getAllTools` and `getCommands` throw during extension
- * loading. In that case this adapter defers registration of shared names until `session_start`,
- * checks both registries before claiming them, and stays off if another owner is present.
- * A legacy extension loaded later can still replace our names; the same session-start check
- * detects that order. The legacy tool carries a source path (realpath'd for linked installs);
- * OMP commands have no path, so our `/jev` is identified by OWN_COMMAND_DESCRIPTION.
- * The lock remains necessary to avoid registering names when the legacy plugin is installed
- * but not visible through the runtime registries.
+ * Two checks, because OMP runtime actions (`getAllTools`, `getCommands`) throw during extension
+ * load:
+ * - load time (`register()`): the plugins lock (read-only). Decides whether same-named tools and
+ *   commands are registered at all.
+ *   A `/jev` already registered by an earlier-loaded extension (when the host can list commands at
+ *   load) counts too.
+ * - `session_start`: a non-own `jev_acceptance_gate` tool (source path outside this package, both
+ *   sides realpath'd so `omp plugin link` symlinks match) or a `/jev` command that is not ours.
+ *   Forces the session off.
+ *
+ * OMP 18.3.5 `getCommands()` is built from a Map keyed by name (later loader wins, no path, no
+ * handler), so `/jev` ownership is told by its description: ours carries `OWN_COMMAND_DESCRIPTION`.
  */
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";

@@ -1,4 +1,4 @@
-/** The OMP adapter's only import of host-neutral adapter helpers (public entry). */
+/** The OMP adapter's only import of host-neutral adapter helpers (public entry, T042). */
 export {
   containsCredential,
   defaultConfig,

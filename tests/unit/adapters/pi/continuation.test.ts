@@ -1,5 +1,5 @@
 /**
- * completion checkpoint and bounded continuation through the Pi adapter, driven by the
+ * T027: completion checkpoint and bounded continuation through the Pi adapter, driven by the
  * fake host's real event names (`agent_before_settle`, `agent_settled`, `input`, `tool_result`).
  * No real Pi, model or Jev: Jev is a fake fetch.
  */

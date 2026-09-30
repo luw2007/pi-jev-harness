@@ -1,4 +1,4 @@
-/** Verifier: bench cancellation classification, end to end through runOne with a stub CLI (no Pi, no model). */
+/** Verifier T102c: bench cancellation classification, end to end through runOne with a stub CLI (no Pi, no model). */
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

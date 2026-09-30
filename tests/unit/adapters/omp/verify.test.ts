@@ -1,5 +1,5 @@
 /**
- * Verifier edge cases for the OMP adapter, against a fake OMP host.
+ * Verifier edge cases for the OMP adapter (T103), against a fake OMP host.
  * Covers: outbound default, non-blocking event path, telemetry privacy, credential withholding,
  * profile edge inputs, schema conversion edge inputs, /jev mode guards, reload after shutdown.
  */
@@ -24,8 +24,9 @@ const MODELS: OmpModel[] = [
 
 function fakeHost(version: unknown = "18.3.5") {
   const handlers = new Map<string, OmpHandler[]>();
-  const commands = new Map<string, { (args: string, ctx: OmpContext): unknown; description?: string }>();
+  const commands = new Map<string, (args: string, ctx: OmpContext) => unknown>();
   const setterCalls: string[] = [];
+  const commandMap = new Map<string, { name: string; source: "extension"; description?: string }>();
   const notes: string[] = [];
   const ctx: OmpContext = {
     model: MODELS[0],
@@ -37,8 +38,11 @@ function fakeHost(version: unknown = "18.3.5") {
   const api: OmpExtensionAPI = {
     pi: { VERSION: version },
     on(event, handler) { handlers.set(event, [...(handlers.get(event) ?? []), handler]); },
-    registerCommand(name, options) { Object.assign(options.handler, { description: options.description }); commands.set(name, options.handler); },
-    getCommands: () => [...commands.entries()].map(([name, c]) => ({ name, source: "extension" as const, description: c.description })),
+    registerCommand(name, options) {
+      commands.set(name, options.handler);
+      commandMap.set(name, { name, source: "extension", description: options.description });
+    },
+    getCommands: () => [...commandMap.values()],
     getAllTools: () => [
       { name: "read", description: "Read a file", parameters: { type: "object", properties: {} }, sourceInfo: { source: "builtin" } },
       { name: "bash", description: "Run a shell command", parameters: { type: "object", properties: {} }, sourceInfo: { source: "builtin" } },

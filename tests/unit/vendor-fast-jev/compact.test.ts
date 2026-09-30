@@ -1,4 +1,4 @@
-// Transcript fixture adapted from jerryfane/omp-jev-compaction@e21ab3273542a07984c4f2cfc4b3e746dc95930c:tests/cache-identity.test.ts (MIT); the tests themselves are kernel tests.
+// Transcript fixture adapted from jerryfane/omp-jev-compaction@e21ab3273542a07984c4f2cfc4b3e746dc95930c:tests/cache-identity.test.ts (MIT); the tests themselves are T023 kernel tests.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { compact, batchCalls, questionsFor, applyDecisions, messageChars, reductionRatio } from "../../../vendor/fast-jev/compact.ts";

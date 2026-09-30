@@ -1,5 +1,5 @@
 /**
- * Host port: the small, host-independent surface the adapters drive. Each host
+ * Host port (T105 L1): the small, host-independent surface the adapters drive. Each host
  * (Pi: `../pi/port.ts`, OMP: `../omp/port.ts`) implements it by mapping its own API field by
  * field; nothing here imports a host package, so both adapters and host-neutral logic can use it.
  *
@@ -79,7 +79,7 @@ export interface HostSessionView {
   signal: AbortSignal | undefined;
   /** Parent session id/path when this is a spawned (child/sub) session. */
   parentSession: string | undefined;
-  /** Child sessions are never intervened in (安全). */
+  /** Child sessions are never intervened in (T105 安全). */
   isChildSession: boolean;
   /** Queued user messages or running/pending async jobs: no continuation now. */
   hasPendingWork(): boolean;

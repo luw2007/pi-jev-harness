@@ -2,11 +2,12 @@
  * OMP adapter against a fake OMP host (shapes from omp/18.3.5, see src/adapters/omp/types.ts).
  */
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { loadOmpConfig } from "../../../../src/adapters/omp/config.ts";
+import { loadOmpConfig, ompHarnessDir, ompProvidersPath } from "../../../../src/adapters/omp/config.ts";
+import { defaultOmpHostDeps } from "../../../../src/adapters/omp/host.ts";
 import { createExtension } from "../../../../src/adapters/omp/index.ts";
 import { detectProfile } from "../../../../src/adapters/omp/profile.ts";
 import { ompToolSchema } from "../../../../src/adapters/omp/tools.ts";
@@ -30,8 +31,8 @@ interface FakeHost {
 
 function fakeHost(version: unknown): FakeHost {
   const handlers = new Map<string, OmpHandler[]>();
+  const commandMap = new Map<string, { name: string; source: "extension"; description?: string }>();
   const commands: string[] = [];
-  const registeredCommands = new Map<string, { name: string; description?: string; source: "extension" }>();
   const setterCalls: string[] = [];
   const ctx: OmpContext = {
     model: MODELS[0],
@@ -47,9 +48,9 @@ function fakeHost(version: unknown): FakeHost {
     },
     registerCommand(name, options) {
       commands.push(name);
-      registeredCommands.set(name, { name, description: options.description, source: "extension" });
+      commandMap.set(name, { name, source: "extension", description: options?.description });
     },
-    getCommands: () => [...registeredCommands.values()],
+    getCommands: () => [...commandMap.values()],
     getAllTools: () => [
       { name: "read", description: "Read a file", parameters: { type: "object", properties: {} }, sourceInfo: { source: "builtin" } },
       { name: "bash", description: "Run a shell command", parameters: { type: "object", properties: {} }, sourceInfo: { source: "builtin" } },
@@ -223,4 +224,38 @@ test("router mode on still only observes in OMP", async () => {
   assert.ok(s.jev.state.requests > 0);
   assert.deepEqual(s.host.setterCalls, []);
   assert.ok(results.every((result) => result === undefined));
+});
+
+test("session start fails closed when getCommands is missing on host", async () => {
+  const s = setup(SHADOW);
+  // Simulate host omitting optional getCommands API
+  delete (s.host.api as { getCommands?: unknown }).getCommands;
+  s.load();
+  await s.host.emit("session_start");
+  const status = (s.registry as Record<symbol, { host: { statusText(): string } }>)[Symbol.for("pi-jev-harness.adapter.omp")];
+  assert.match(status.host.statusText(), /OMP registry unavailable at session_start/);
+});
+
+test("ompProvidersPath prioritizes pi-jev-harness directory over legacy directory", async () => {
+  const home = "/test/home";
+  const harnessFile = join(ompHarnessDir(home), "jev-providers.json");
+  const legacyFile = join(home, ".omp", "agent", "jev-providers.json");
+
+  // When harnessFile exists -> choose harnessFile
+  assert.equal(ompProvidersPath(home, (p) => p === harnessFile), harnessFile);
+
+  // When harnessFile does not exist -> fall back to legacyFile
+  assert.equal(ompProvidersPath(home, () => false), legacyFile);
+
+  const scratch = await mkdtemp(join(tmpdir(), "omp-providers-path-"));
+  try {
+    const localFile = join(ompHarnessDir(scratch), "jev-providers.json");
+    const fallback = join(scratch, ".omp", "agent", "jev-providers.json");
+    assert.equal(defaultOmpHostDeps({ env: { HOME: scratch } }).legacyProvidersPath, fallback);
+    await mkdir(ompHarnessDir(scratch), { recursive: true });
+    await writeFile(localFile, "{}");
+    assert.equal(defaultOmpHostDeps({ env: { HOME: scratch } }).legacyProvidersPath, localFile);
+  } finally {
+    await rm(scratch, { recursive: true, force: true });
+  }
 });

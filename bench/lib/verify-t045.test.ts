@@ -1,4 +1,4 @@
-/** Verifier checks: bench outcome classification against the `pi-jev run --json` shape. */
+/** Verifier checks: bench outcome classification against the T043/T044/T045 `pi-jev run --json` shape. */
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { outcomeOf, type ProcResult } from "./runner.ts";

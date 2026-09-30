@@ -8,6 +8,7 @@ type Source = {
   id: string;
   name: string;
   url: string;
+  local_path: string | null;
   pinned_commit: string;
   current_head: string | null;
   license: string;
@@ -23,6 +24,7 @@ const requiredFields = [
   "id",
   "name",
   "url",
+  "local_path",
   "pinned_commit",
   "current_head",
   "license",

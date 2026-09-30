@@ -1,4 +1,4 @@
-// verification: edge cases for src/harness/completion.ts beyond the builder tests.
+// T030 verification: edge cases for src/harness/completion.ts beyond the T020 builder tests.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { ChoiceEvidence, JevResult, NoulEvidence } from "../../../src/jev/index.ts";

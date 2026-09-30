@@ -1,5 +1,5 @@
 /**
- * enforced envelope review at OMP `tool_call`.
+ * T105 C2: enforced envelope review at OMP `tool_call`.
  *
  * Same decision path as the Pi harness enforce branch (`../pi/harness.ts` toolCall/prepareReview/
  * review), built on the same host-neutral harness primitives; the Pi run products (receipts,

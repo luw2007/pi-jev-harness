@@ -16,7 +16,7 @@ import type {
   WireResult,
 } from "./types.ts";
 
-/** Legacy plugin tolerance: providers round to 4 decimals (an internal Jev deployment sums 0.9999 / 1.0001). Accepted sums are renormalized to 1. */
+/** Legacy plugin tolerance: providers round to 4 decimals (bjev sums 0.9999 / 1.0001). Accepted sums are renormalized to 1. */
 export const PROBABILITY_SUM_TOLERANCE = 0.01;
 
 type Data = Record<string, unknown>;

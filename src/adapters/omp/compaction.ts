@@ -2,7 +2,7 @@
 // (`jevCompaction`, `mapOmpMessages`, `renderVerbatim`, `transcriptChars`, `splitIntoWindows`,
 // `mergeResults`) and extensions/jev-autorun/jev-autorun.ts (`assessCompact`). MIT.
 //
-// at `session_before_compact` the region OMP is about to discard is scored by Jev
+// C8 (T105 L4): at `session_before_compact` the region OMP is about to discard is scored by Jev
 // (vendored fast-jev `compact`) and, when the saving is real, returned as retained history
 // verbatim: the "summary" IS the kept conversation, unchanged and in order, minus the tool
 // calls/results Jev judged unneeded. No summary is generated. Any failure (Jev unavailable,
@@ -237,7 +237,7 @@ function validCompaction(value: OmpCompactionResult | undefined): value is OmpCo
 // ---- adapter -----------------------------------------------------------------------------------
 
 export interface OmpCompactionDeps {
-  /** provider chain / legacy mapping / single-url for the `compact` capability. */
+  /** T105 C9: provider chain / legacy mapping / single-url for the `compact` capability. */
   /** Default: from `config` alone (single-url unless `jev.providers`). */
   jev?: JevAccess;
   config: AdapterConfig;
@@ -296,7 +296,7 @@ export function createOmpCompaction(deps: OmpCompactionDeps): OmpCompaction {
   let lastCompaction = "none";
   let lastProactive = "none";
 
-  // the `compact` chain; one ask = one compaction unit.
+  // C9: the `compact` chain; one ask = one compaction unit.
   const jev = deps.jev ?? createJevAccess({ config, env: deps.env });
   const client: JevClient | undefined = jev.client("compact", {
     fetch: (input, init) => {

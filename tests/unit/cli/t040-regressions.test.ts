@@ -1,5 +1,5 @@
 /**
- * host verification: CLI regressions for defects confirmed from the real entry points.
+ * T040 host verification: CLI regressions for defects confirmed from the real entry points.
  * These tests fail on de06f3a and describe the expected behavior.
  */
 import { test } from "node:test";
@@ -32,7 +32,7 @@ function deps(root: string, overrides: Partial<CliDeps> = {}): CliDeps & { stdou
   return Object.assign(d, { stdout: () => out });
 }
 
-// Real host: with context.request shadow, a live `pi` session registers jev_recall and
+// Real host (T040 §3.4): with context.request shadow, a live `pi` session registers jev_recall and
 // sends it to the provider, yet `pi-jev doctor` prints "jev_recall：未注册" and
 // "（部分预期项未注册）", because it never emits session_start. Doctor must report real state.
 test("T040: doctor does not report jev_recall as missing when context.request enables it", async () => {
@@ -47,7 +47,7 @@ test("T040: doctor does not report jev_recall as missing when context.request en
   });
 });
 
-// Real host (g): mode off → status native_off, but `report` names a run directory that
+// Real host (T040 §3.3 g): mode off → status native_off, but `report` names a run directory that
 // was never created (the CLI's own reason says no run products were recorded).
 test("T040: a native_off result does not point report at a run directory that does not exist", async () => {
   await withTemp(async (root) => {
@@ -66,7 +66,7 @@ test("T040: a native_off result does not point report at a run directory that do
   });
 });
 
-// Real host: `pi-jev run` wrote the run under PI_JEV_RUNS_DIR (it also honors config
+// Real host (T040 §3.5): `pi-jev run` wrote the run under PI_JEV_RUNS_DIR (it also honors config
 // `harness.runsDir`), but `pi-jev report <run-id>` with the same environment looked only in
 // ~/.pi/agent/pi-jev-harness/runs and answered "产物不完整 … 没有 run.json", exit 1
 // (src/cli/context.ts resolveRunTarget → defaultRunDir). report/replay by id must find the run where run put it.

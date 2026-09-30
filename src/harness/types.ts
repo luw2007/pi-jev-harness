@@ -2,30 +2,30 @@
  * Harness contracts in one place (technical design §5, §7.1).
  *
  * Where each type lives (declared here unless a module is named):
- * - Actions, declared here: `ACTION_KINDS`/`ActionKind`, `ToolCallInput`, `FsStat`,
+ * - Actions (T011), declared here: `ACTION_KINDS`/`ActionKind`, `ToolCallInput`, `FsStat`,
  *   `HarnessFs`, `AuthorizationScope`, `ActionHost`, `ActionPolicy`, `Preimage`, `Replacement`,
  *   `ActionChange`, `ScopeRef`, `ActionEnvelope`, `EnvelopeValidation`, `Freshness`.
  *   Behaviour: `./actions.ts`.
- * - Review, `./review-types.ts`: `ReviewableAction` (+ `ReviewableEdit`/`Create`/`Overwrite`,
+ * - Review (T012), `./review-types.ts`: `ReviewableAction` (+ `ReviewableEdit`/`Create`/`Overwrite`,
  *   `ReviewableActionKind`) is a view derived from `ActionEnvelope`, built only by
  *   `toReviewableAction` in `./review.ts`; `AllowedReviewContext`, `ActionReviewMode`,
  *   `ActionReviewStatus`, `NoulAsk`, `ActionReview`. Question sets: `./review-questions.ts`.
- * - Evidence, `./evidence.ts`: `Evidence`, `EvidenceOutcome`, `EvidenceOutput`,
+ * - Evidence (T013), `./evidence.ts`: `Evidence`, `EvidenceOutcome`, `EvidenceOutput`,
  *   `EvidenceOutputBlock`, `EvidenceArtifact`, `ToolResultInput`, `EvidenceOptions`,
  *   `RecordedToolResult`, `FileChange`, `ChangeKind`.
- * - Receipts, `./receipt.ts`: `RuntimeReceipt`, `SealedRuntimeReceipt`, `RuntimeReceiptInput`,
+ * - Receipts (T013), `./receipt.ts`: `RuntimeReceipt`, `SealedRuntimeReceipt`, `RuntimeReceiptInput`,
  *   `DigestRef`, `ReceiptExecution`, `ReceiptVerification`, `ReceiptUsage`, `ExecutionStatus`,
  *   `VerificationStatus`, `TrustedCurrent`, `ReplayOutcome`.
- * - Run products, `./run-artifacts.ts`: `RunRecord`, `RunJson`, `RunUsage`, `UsageTotal`,
+ * - Run products (T013/T015), `./run-artifacts.ts`: `RunRecord`, `RunJson`, `RunUsage`, `UsageTotal`,
  *   `RunVerification`, `VerificationWaiver`, `RunCompletion`, `TaskStatus`, `RunArtifactsFs`, `WriteRunArtifactsOptions`.
- * - Completion, `./completion.ts`: `CompletionResult` (§5), `CompletionStatus`, `CompletionGap`,
+ * - Completion (T020), `./completion.ts`: `CompletionResult` (§5), `CompletionStatus`, `CompletionGap`,
  *   `CompletionGapCode`, `CompletionValidation`, `CompletionTask`, `CompletionTaskKind`,
  *   `CompletionEvidence`, `AssessmentKind`, `ChoiceAsk`, `AssessAcceptanceInput`,
  *   `AssessCheckpointInput`, `ForemanDimension`, `ForemanDimensionId`, `ForemanScores`,
  *   `ForemanAction`, `ForemanDecision`.
- * - Continuation, `./continuation.ts`: `ContinuationInput`, `ContinuationDecision`,
+ * - Continuation (T021), `./continuation.ts`: `ContinuationInput`, `ContinuationDecision`,
  *   `ContinuationAssessment`, `ContinuationSnapshot`, `ContinuationThresholds`, `ContinuationStopReason`.
- * - Lifecycle controller, `./controller.ts`: `Controller`, `ControllerOptions`,
+ * - Lifecycle controller (T022/T027), `./controller.ts`: `Controller`, `ControllerOptions`,
  *   `ControllerMode`, `ControllerEvent`, `ControllerResult`, `ControllerPhase`, `ActivePhase`,
  *   `ControllerSnapshot`, `ControllerTransition`, `DiscardedDecision`, `AssessContext`, `AssessFn`,
  *   `DecideInput`, `DecideFn`. `assess` returns `CompletionResult`; `decide` returns `ContinuationDecision`.

@@ -1,13 +1,13 @@
 /**
  * OPT-IN live variant of the OMP host test (the default host test is omp-shadow-offline.test.ts,
  * which uses no real model). Runs only with PI_JEV_OMP_LIVE=1 and these variables:
- *   PI_JEV_OMP_LIVE_PROVIDER   provider name (must not be in the real
+ *   PI_JEV_OMP_LIVE_PROVIDER   provider name (must not be deepseek, must not be in the real
  *                              ~/.omp/agent/config.yml `disabledProviders`; the test refuses otherwise)
  *   PI_JEV_OMP_LIVE_MODEL      model id at that provider
  *   PI_JEV_OMP_LIVE_BASE_URL   the provider's OpenAI-compatible base URL
  *   PI_JEV_OMP_LIVE_KEY_ENV    name of the env variable holding that provider's key
  * The child gets a minimal env allowlist: PATH, HOME (temp), TMPDIR, the fake Jev key/URL and
- * only that one provider key (no other key). Model requests go through a
+ * only that one provider key (never DEEPSEEK_API_KEY, no other key). Model requests go through a
  * local recording proxy that forwards at most 6 and refuses the rest locally; `retry.modelFallback`
  * and retries are off via `--config`. HOME, config and telemetry are temp directories.
  */
@@ -19,7 +19,6 @@ import type { AddressInfo } from "node:net";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
-import { findOmp } from "./omp-bin.ts";
 
 const LIVE = process.env.PI_JEV_OMP_LIVE === "1";
 const PROVIDER = process.env.PI_JEV_OMP_LIVE_PROVIDER ?? "";
@@ -30,7 +29,7 @@ const PROMPT = "Reply with exactly the single word OK and nothing else. Do not u
 const FAKE_KEY = "fake-typesafe-key-for-omp-host-test";
 const EXTENSION = resolve(import.meta.dirname, "../../src/adapters/omp/index.ts");
 const REAL_HOME = homedir();
-const OMP = findOmp();
+const OMP = "/opt/homebrew/bin/omp";
 const MAX_MODEL_REQUESTS = 6;
 
 async function body(request: IncomingMessage): Promise<string> {
@@ -132,6 +131,7 @@ async function liveProvider(): Promise<{ upstream: string; header: string }> {
   const upstream = process.env.PI_JEV_OMP_LIVE_BASE_URL ?? "";
   assert.ok(PROVIDER && MODEL_ID && upstream && KEY_ENV, "PI_JEV_OMP_LIVE_PROVIDER/_MODEL/_BASE_URL/_KEY_ENV are required");
   assert.ok(/^[A-Za-z0-9_-]+$/.test(PROVIDER) && /^[A-Z][A-Z0-9_]*$/.test(KEY_ENV));
+  assert.ok(!/deepseek/i.test(`${PROVIDER} ${MODEL_ID} ${KEY_ENV}`), "deepseek is never allowed");
   const disabled = await disabledProviders();
   assert.ok(!disabled.includes(PROVIDER), `provider ${PROVIDER} is disabled by the user (disabledProviders); refusing`);
   assert.ok(process.env[KEY_ENV], `${KEY_ENV} is not set`);
@@ -172,8 +172,10 @@ interface RunResult {
 function runOmp(home: string, cwd: string, jevUrl: string): Promise<RunResult> {
   const args = ["-p", "--no-session", "--mode", "json", "--no-extensions", "--no-skills", "--no-rules", "--no-title", "--no-lsp",
     "--config", join(home, "overlay.yml"), "--model", MODEL, "--extension", EXTENSION, PROMPT];
+  assert.ok(!args.some((arg) => /deepseek/i.test(arg)));
   // Minimal allowlist: only the chosen provider's key, nothing else inherited.
   const env: NodeJS.ProcessEnv = { PATH: process.env.PATH, HOME: home, TMPDIR: tmpdir(), TYPESAFE_API_KEY: FAKE_KEY, PI_JEV_URL: jevUrl, [KEY_ENV]: process.env[KEY_ENV] };
+  assert.ok(!("DEEPSEEK_API_KEY" in env));
   const child = spawn(OMP, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
   let stdout = "", stderr = "";
   child.stdout.on("data", (chunk) => { stdout += chunk; });
@@ -203,7 +205,7 @@ async function telemetry(home: string): Promise<string> {
   return (await Promise.all(names.map((name) => readFile(join(dir, name), "utf8")))).join("");
 }
 
-test("LIVE real omp: off sends no Jev request; shadow consults Jev without changing provider/model or tools", { timeout: 600_000, skip: !LIVE ? "set PI_JEV_OMP_LIVE=1 (see header) to run against a real provider" : OMP ? false : "omp not found: set OMP_BIN or put omp on PATH" }, async () => {
+test("LIVE real omp: off sends no Jev request; shadow consults Jev without changing provider/model or tools", { timeout: 600_000, skip: LIVE ? false : "set PI_JEV_OMP_LIVE=1 (see header) to run against a real provider" }, async () => {
   const { upstream, header } = await liveProvider();
   const jev = await startFakeJev();
   const proxy = await startModelProxy(upstream);
@@ -240,6 +242,7 @@ test("LIVE real omp: off sends no Jev request; shadow consults Jev without chang
 
     assert.ok(proxy.budget.forwarded <= MAX_MODEL_REQUESTS, "model request budget");
     assert.equal(proxy.budget.refused, 0, "no run exceeded its model request budget");
+    for (const call of [...offCalls, ...shadowCalls]) assert.ok(!/deepseek/i.test(call.model));
     assert.equal(off.code, 0, off.stderr);
     assert.equal(shadow.code, 0, shadow.stderr);
     assert.equal(offJev, 0, "off must not contact Jev");

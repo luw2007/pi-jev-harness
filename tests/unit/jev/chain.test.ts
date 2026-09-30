@@ -128,7 +128,7 @@ test("total wait stays within budget; remaining providers recorded as budget_exh
 
 test("missing key skips a provider; identity none/prefix accepted with warning", async () => {
   const r = run(
-    [spec("x"), spec("b", { identity: "none", model: "jev-internal" }), spec("c")],
+    [spec("x"), spec("b", { identity: "none", model: "bjev" }), spec("c")],
     { "b.test": ok("jev-9"), "c.test": ok() },
   );
   const result = await r.result;
@@ -183,7 +183,7 @@ test("legacy jev-providers.json maps to a chain, read-only, with its source", ()
   assert.ok(result.ok);
   assert.deepEqual(result.source, { kind: "legacy", path: FIXTURE });
   const [internal, typesafe, openrouter] = result.config.providers;
-  assert.deepEqual(internal, { id: "internal", url: "https://jev.example.invalid/v1/systemone", model: "jev-internal", identity: "none", timeoutMs: 3000 });
+  assert.deepEqual(internal, { id: "internal", url: "https://bjev.example.invalid/v1/systemone", model: "bjev", identity: "none", timeoutMs: 3000 });
   assert.equal(typesafe!.identity, "exact");
   assert.equal(typesafe!.keyEnv, "TYPESAFE_API_KEY");
   assert.equal(openrouter!.keyEnv, "FAKE_OPENROUTER_KEY_ENV");

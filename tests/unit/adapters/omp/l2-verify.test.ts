@@ -1,5 +1,5 @@
 /**
- * verification (verifier-owned): boundary, failure and parity cases for C1 tool apply,
+ * T105 L2 verification (verifier-owned): boundary, failure and parity cases for C1 tool apply,
  * C2 enforce and C3 approval + steer, driven through the real OMP extension entry
  * (`createExtension`) against a fake OMP 18.3.5 host and a fake Jev. No real model or Jev.
  *
@@ -68,7 +68,7 @@ async function fakeHost(options: HostOptions = {}) {
     pi: { VERSION: "18.3.5" },
     on(event, handler) { handlers.set(event, [...(handlers.get(event) ?? []), handler]); },
     registerCommand(name, command) { commands.set(name, command as never); },
-    getCommands: () => [...commands.entries()].map(([name, c]) => ({ name, source: "extension" as const, description: c.description })),
+    getCommands: () => [...commands.entries()].map(([name, cmd]) => ({ name, source: "extension", description: cmd.description })),
     getAllTools: () => TOOLS,
     getActiveTools: () => [...active],
     getThinkingLevel: () => "medium",

@@ -1,6 +1,6 @@
 // Continuation question text adapted from omp-jev-extensions@0f93c809c2088c61fab4e613807e515ff9e65b1a:extensions/jev-autorun/jev-autorun.ts (MIT)
 /**
- * Host-neutral per-task lifecycle (extracted from the Pi adapter; Pi wraps it in
+ * Host-neutral per-task lifecycle (T105: extracted from the Pi adapter; Pi wraps it in
  * `../pi/lifecycle.ts`, OMP in `../omp/stop.ts`). Originally: per-task lifecycle wiring for Pi (technical §7.2, §7.3, §9.3, §10; product §4.1, §5 step 5, §7.3, §8).
  * One controller per user task (`before_agent_start`); continuations are counted per task.
  *

@@ -1,5 +1,5 @@
 /**
- * request-level context reduction on Pi's `context` event and the `jev_recall` tool, driven
+ * T038: request-level context reduction on Pi's `context` event and the `jev_recall` tool, driven
  * through the fake host. No real Pi, model or Jev: Jev is a fake fetch answering Noul questions;
  * archives go to a temp directory.
  */

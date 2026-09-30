@@ -1,5 +1,5 @@
 /**
- * apply the routed tool bundle to the OMP host (session mode `on` + `router.tools: "on"`).
+ * T105 C1: apply the routed tool bundle to the OMP host (session mode `on` + `router.tools: "on"`).
  *
  * Same rules as the Pi adapter (`../pi/host.ts` applyTools/restoreTools), through the host port:
  * - the routed bundle plus resident read/search/exec/Jev tools, intersected with the current host

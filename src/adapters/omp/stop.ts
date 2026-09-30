@@ -1,6 +1,6 @@
 /**
- * OMP completion checkpoint and bounded continuation, plus the assessment tools and
- * `jev_route` state. Reuses the host-neutral lifecycle (`../core/lifecycle.ts`): one
+ * OMP completion checkpoint and bounded continuation (T105 C4), plus the assessment tools and
+ * `jev_route` state (C5). Reuses the host-neutral lifecycle (`../core/lifecycle.ts`): one
  * checkpoint assessment per boundary, then the continuation decision (`decideContinuation`).
  *
  * `session_stop` is the only boundary that may continue; the result is the port's
@@ -25,7 +25,7 @@
  *
  * Evidence comes from the transcript (`session_stop.messages`, or the session branch for tool
  * calls): `edit`/`write` paths as changes, check commands run through `bash` as checks, the last
- * assistant text as the answer. Upgrade to a workspace diff when OMP evidence capture lands.
+ * assistant text as the answer. Upgrade to a workspace diff when OMP evidence capture (L2) lands.
  */
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { JevAttempt, JevCapability, JevClient } from "../../jev/index.ts";
@@ -71,9 +71,9 @@ export interface OmpStopDeps {
   record(event: TelemetryInput): void;
   getAllTools(): OmpToolInfo[];
   getActiveTools(): string[];
-  /** provider chain per capability and the credential-scan secrets. */
+  /** T105 C9: provider chain per capability and the credential-scan secrets. */
   jev: JevAccess;
-  /** content-free stop decision line (the session's audit writer). */
+  /** C11: content-free stop decision line (the session's audit writer). */
   audit?: (input: AuditInput) => void;
 }
 
