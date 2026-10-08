@@ -132,6 +132,16 @@ test("missing usage aggregates as unknown, not 0", () => {
   assert.equal(sanitizeEvent({ ...base, costUsd: -1 }, 1)!.costUsd, null);
 });
 
+test("chain-step events are reported apart and do not dilute token coverage", () => {
+  const step = { providerId: "internal", outcome: "ok", fellBack: false } as const;
+  const report = aggregate([
+    event({ attemptId: att(1), tokens: { input: 9, output: 1, cacheRead: null, cacheWrite: null } }),
+    event({ decisionId: `dec_${uuid(2)}`, chain: step }),
+  ]);
+  assert.deepEqual(report.tokenCoverage, { known: 1, total: 1, ratio: 1 });
+  assert.deepEqual(report.groups.map((g) => [g.kind, g.chainStep ?? false, g.events]), [["jev_attempt", false, 1], ["jev_attempt", true, 1]]);
+});
+
 test("aggregate counts each attemptId once", () => {
   const report = aggregate([
     event({ attemptId: att(1), durationMs: 10 }),

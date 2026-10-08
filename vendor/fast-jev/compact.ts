@@ -28,6 +28,10 @@ export const DEFAULT_OPTIONS: ResolvedCompactOptions = {
 /** Tokens the request envelope (`model`, key names) adds around state and questions. */
 const REQUEST_OVERHEAD_TOKENS = 20;
 
+/** bjev rejects a request with more than 64 questions (HTTP 422); `questionsFor` asks 2 per call. */
+export const MAX_QUESTIONS_PER_REQUEST = 64;
+const MAX_CALLS_PER_BATCH = MAX_QUESTIONS_PER_REQUEST / 2;
+
 function finite(value: number | undefined, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
@@ -85,7 +89,7 @@ export function batchCalls(
   let currentTokens = 0;
   for (const call of calls) {
     const tokens = estimateTokens(JSON.stringify(questionsFor(call)));
-    if (current.length > 0 && currentTokens + tokens > budget) {
+    if (current.length > 0 && (currentTokens + tokens > budget || current.length >= MAX_CALLS_PER_BATCH)) {
       batches.push(current);
       current = [];
       currentTokens = 0;

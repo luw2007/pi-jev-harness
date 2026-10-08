@@ -103,6 +103,16 @@ test("batchCalls throws when state leaves no room for questions", () => {
   }, /state leaves no room/);
 });
 
+test("batchCalls never puts more than 64 questions (32 calls) in one request", () => {
+  const calls: ToolCall[] = Array.from({ length: 100 }, (_, i) => ({
+    id: `t${i}`, tool_use_id: `u-${i}`, tool: "read", input: {}, callIndex: 2 * i + 1, resultIndex: 2 * i + 2,
+    resultChars: 10, isError: false, pinned: false, cacheKey: `k${i}`,
+  }));
+  const batches = batchCalls(calls, 0, { maxRequestTokens: 1_000_000 });
+  assert.deepEqual(batches.map((b) => b.length), [32, 32, 32, 4]);
+  for (const batch of batches) assert.ok(Object.keys(batch.reduce((q, c) => ({ ...q, ...questionsFor(c) }), {})).length <= 64);
+});
+
 test("questionsFor produces noul questions for one call", () => {
   const call: ToolCall = {
     id: "t1",

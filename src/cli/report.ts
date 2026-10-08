@@ -124,7 +124,8 @@ export function renderTelemetry({ dir, report: r, audit }: { dir: string; report
   if (r.groups.length > 0) lines.push("", "按类别与结果");
   for (const g of r.groups) {
     const cost = g.costUsd.sum === null ? "未知" : `$${g.costUsd.sum}（${g.costUsd.known}/${g.costUsd.total} 有数据）`;
-    lines.push(`- ${g.kind} / ${g.outcome}：${g.events} 次，p50 ${stat(g.durationMs.p50)}，费用 ${cost}`);
+    const input = g.tokens.input.sum === null ? "" : `，输入 token ${g.tokens.input.sum}（${g.tokens.input.known}/${g.tokens.input.total} 有数据）`;
+    lines.push(`- ${g.kind}${g.chainStep ? "（链路步骤）" : ""} / ${g.outcome}：${g.events} 次，p50 ${stat(g.durationMs.p50)}，费用 ${cost}${input}`);
   }
   if (audit) {
     lines.push("", `审计（stop/route/autorun/approval）：文件 ${audit.files}，行 ${audit.lines}，接受 ${audit.accepted}，跳过 ${audit.skipped}`);

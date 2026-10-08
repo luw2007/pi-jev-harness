@@ -63,24 +63,27 @@ export function aggregate(events: readonly TelemetryEvent[]): TelemetryReport {
   for (const event of unique) {
     byKind[event.kind] = (byKind[event.kind] ?? 0) + 1;
     byOutcome[event.outcome] = (byOutcome[event.outcome] ?? 0) + 1;
-    const key = `${event.kind}\u0000${event.outcome}`;
+    const key = `${event.kind}\u0000${event.outcome}\u0000${event.chain ? "chain" : ""}`;
     const group = groups.get(key);
     if (group) group.push(event);
     else groups.set(key, [event]);
   }
 
-  const tokenKnown = unique.filter((e) => e.tokens !== null).length;
+  // Chain-step events restate a physical attempt's outcome and never carry usage; they would dilute coverage.
+  const physical = unique.filter((e) => !e.chain);
+  const tokenKnown = physical.filter((e) => e.tokens !== null).length;
   const finished: TelemetryGroup[] = [...groups.values()].map((items) => ({
     kind: items[0]!.kind,
     outcome: items[0]!.outcome,
     events: items.length,
+    ...(items[0]!.chain ? { chainStep: true as const } : {}),
     durationMs: durationStats(items.map((e) => e.durationMs)),
     tokens: Object.fromEntries(
       TOKEN_KEYS.map((key) => [key, knownSum(items.map((e) => e.tokens?.[key] ?? null))]),
     ) as TelemetryGroup["tokens"],
     costUsd: knownSum(items.map((e) => e.costUsd)),
   }));
-  finished.sort((a, b) => a.kind.localeCompare(b.kind) || a.outcome.localeCompare(b.outcome));
+  finished.sort((a, b) => a.kind.localeCompare(b.kind) || a.outcome.localeCompare(b.outcome) || Number(a.chainStep === true) - Number(b.chainStep === true));
 
   return {
     schemaVersion: TELEMETRY_SCHEMA_VERSION,
@@ -91,8 +94,8 @@ export function aggregate(events: readonly TelemetryEvent[]): TelemetryReport {
     durationMs: durationStats(unique.map((e) => e.durationMs)),
     tokenCoverage: {
       known: tokenKnown,
-      total: unique.length,
-      ratio: unique.length === 0 ? null : tokenKnown / unique.length,
+      total: physical.length,
+      ratio: physical.length === 0 ? null : tokenKnown / physical.length,
     },
     groups: finished,
   };

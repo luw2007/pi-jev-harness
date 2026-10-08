@@ -173,6 +173,8 @@ export interface TelemetryGroup {
   kind: TelemetryKind;
   outcome: TelemetryOutcome;
   events: number;
+  /** `jev_attempt` only: provider-chain steps, reported apart from physical requests (each call yields both). */
+  chainStep?: true;
   durationMs: DurationStats;
   tokens: Record<keyof TelemetryTokens, KnownSum>;
   costUsd: KnownSum;

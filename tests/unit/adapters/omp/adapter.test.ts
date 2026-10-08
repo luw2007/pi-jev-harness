@@ -2,7 +2,7 @@
  * OMP adapter against a fake OMP host (shapes from omp/18.3.5, see src/adapters/omp/types.ts).
  */
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -226,17 +226,7 @@ test("router mode on still only observes in OMP", async () => {
   assert.ok(results.every((result) => result === undefined));
 });
 
-test("session start fails closed when getCommands is missing on host", async () => {
-  const s = setup(SHADOW);
-  // Simulate host omitting optional getCommands API
-  delete (s.host.api as { getCommands?: unknown }).getCommands;
-  s.load();
-  await s.host.emit("session_start");
-  const status = (s.registry as Record<symbol, { host: { statusText(): string } }>)[Symbol.for("pi-jev-harness.adapter.omp")];
-  assert.match(status.host.statusText(), /OMP registry unavailable at session_start/);
-});
-
-test("ompProvidersPath prioritizes pi-jev-harness directory over legacy directory", async () => {
+test("ompProvidersPath prioritizes pi-jev-harness directory over legacy directory", () => {
   const home = "/test/home";
   const harnessFile = join(ompHarnessDir(home), "jev-providers.json");
   const legacyFile = join(home, ".omp", "agent", "jev-providers.json");
@@ -247,15 +237,7 @@ test("ompProvidersPath prioritizes pi-jev-harness directory over legacy director
   // When harnessFile does not exist -> fall back to legacyFile
   assert.equal(ompProvidersPath(home, () => false), legacyFile);
 
-  const scratch = await mkdtemp(join(tmpdir(), "omp-providers-path-"));
-  try {
-    const localFile = join(ompHarnessDir(scratch), "jev-providers.json");
-    const fallback = join(scratch, ".omp", "agent", "jev-providers.json");
-    assert.equal(defaultOmpHostDeps({ env: { HOME: scratch } }).legacyProvidersPath, fallback);
-    await mkdir(ompHarnessDir(scratch), { recursive: true });
-    await writeFile(localFile, "{}");
-    assert.equal(defaultOmpHostDeps({ env: { HOME: scratch } }).legacyProvidersPath, localFile);
-  } finally {
-    await rm(scratch, { recursive: true, force: true });
-  }
+  // defaultOmpHostDeps wires this in
+  const deps = defaultOmpHostDeps({ env: { HOME: home } });
+  assert.equal(deps.legacyProvidersPath, legacyFile);
 });

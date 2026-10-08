@@ -24,7 +24,7 @@
  * `jev_recall` is registered whenever `context.request` is not off, but it is in the model's active
  * tool set only while reduction is effectively on: shadow and off never change the tool set (E5).
  */
-import { createJevAccess, type JevAccess } from "../shared/jev-access.ts";
+import { attemptTokens, createJevAccess, type JevAccess } from "../shared/jev-access.ts";
 import { formatJevDebugCompact, jevDebugDetails, renderJevDebug, type JevDebugDetails } from "../shared/jev-debug.ts";
 import { randomUUID } from "node:crypto";
 import type {
@@ -271,9 +271,11 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
     void pending.finally(() => state.pendingRecords.delete(pending));
   };
 
+  /** One diagnostic per host; the running count stays in status. */
   const recordDuplicates = (state: SessionState) => {
-    for (; duplicatesRecorded < duplicateLoads; duplicatesRecorded++)
+    if (duplicatesRecorded === 0 && duplicateLoads > 0)
       record(state, { runId: state.runId, decisionId: `dec_${deps.newId()}`, kind: "diagnostic", outcome: "skipped", durationMs: 0, source: "adapter:duplicate_load" });
+    duplicatesRecorded = duplicateLoads;
   };
 
   const noteFallback = (state: SessionState, reason: string) => {
@@ -329,7 +331,7 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
         },
         onJevAttempt: (attempt) =>
           record(state, { runId: state.runId, decisionId: attempt.decisionId, attemptId: attempt.attemptId, kind: "jev_attempt",
-            outcome: attempt.status === "ok" ? "ok" : "unavailable", durationMs: attempt.durationMs, source: `jev:${attempt.status}` }),
+            outcome: attempt.status === "ok" ? "ok" : "unavailable", durationMs: attempt.durationMs, source: `jev:${attempt.status}`, ...attemptTokens(attempt) }),
         onDecision: (kind, decisionId, outcome, durationMs) => record(state, { runId: state.runId, decisionId, kind, outcome, durationMs }),
       }),
       context: createPiContextHook({
@@ -374,7 +376,7 @@ export function createPiHost(pi: ExtensionAPI, deps: HostDeps, onShutdown: () =>
       waitMs: config.budget.waitMs,
       onAttempt: (attempt: JevAttempt) =>
         record(state, { runId: state.runId, decisionId: attempt.decisionId, attemptId: attempt.attemptId, kind: "jev_attempt",
-          outcome: attempt.status === "ok" ? "ok" : "unavailable", durationMs: attempt.durationMs, source: `jev:${attempt.status}` }),
+          outcome: attempt.status === "ok" ? "ok" : "unavailable", durationMs: attempt.durationMs, source: `jev:${attempt.status}`, ...attemptTokens(attempt) }),
     });
   }
 

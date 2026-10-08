@@ -1,5 +1,13 @@
 import type { JevDebugEvent } from "../../jev/index.ts";
 
+function extractInputTokens(body: unknown): number | undefined {
+  if (typeof body !== "object" || body === null || !("usage" in body)) return undefined;
+  const usage = body.usage;
+  if (typeof usage !== "object" || usage === null || !("input_tokens" in usage)) return undefined;
+  const tokens = usage.input_tokens;
+  return typeof tokens === "number" && Number.isFinite(tokens) && tokens >= 0 ? tokens : undefined;
+}
+
 /** One physical terminal row; payloads remain available only in the expanded TUI entry. */
 export function formatJevDebugCompact(event: JevDebugEvent): string {
   const safe = (value: string) => value.replace(/[\r\n\t\x00-\x1f\x7f]/g, " ");
@@ -7,7 +15,9 @@ export function formatJevDebugCompact(event: JevDebugEvent): string {
   const ids = `decision ${safe(event.decisionId)} · attempt ${safe(event.attemptId)}`;
   if (event.phase === "req") return `◇ Jev REQ · ${identity} · ${ids} · sending`;
   const status = event.httpStatus === undefined ? safe(event.status) : `${safe(event.status)} · HTTP ${event.httpStatus}`;
-  return `◆ Jev RESP · ${identity} · ${ids} · ${status} · ${event.durationMs} ms`;
+  const inputTokens = extractInputTokens(event.body);
+  const tokens = inputTokens === undefined ? "" : ` · input tokens ${inputTokens}`;
+  return `◆ Jev RESP · ${identity} · ${ids} · ${status} · ${event.durationMs} ms${tokens}`;
 }
 
 export interface JevDebugDetails {

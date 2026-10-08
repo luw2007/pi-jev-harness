@@ -10,7 +10,7 @@
  * Budget: see ./budget.ts (enforce + approval spend the host-owned per-task counter).
  */
 import type { JevAttempt, JevClient } from "../../jev/index.ts";
-import type { JevAccess } from "../shared/jev-access.ts";
+import { attemptTokens, type JevAccess } from "../shared/jev-access.ts";
 import type { ToolRouteResult } from "../../router/index.ts";
 import type { TelemetryInput } from "../../telemetry/index.ts";
 import type { AuditInput } from "../../telemetry/audit.ts";
@@ -114,7 +114,7 @@ export function createOmpGates(port: HostPort<OmpContext>, api: Pick<OmpExtensio
           newId: () => `att_${deps.newId()}`,
           waitMs: session.loaded.config.budget.waitMs,
           onAttempt: (attempt: JevAttempt) => deps.record({ runId: session.runId, decisionId: task?.decisionId ?? `dec_${deps.newId()}`, attemptId: attempt.attemptId,
-            kind: "jev_attempt", outcome: attempt.status === "ok" ? "ok" : "unavailable", durationMs: attempt.durationMs, source: `jev:${attempt.status}` }),
+            kind: "jev_attempt", outcome: attempt.status === "ok" ? "ok" : "unavailable", durationMs: attempt.durationMs, source: `jev:${attempt.status}`, ...attemptTokens(attempt) }),
         }));
       }
       return clients.get(capability);

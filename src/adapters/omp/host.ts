@@ -34,7 +34,7 @@ import {
 } from "../../router/index.ts";
 import { createTelemetryWriter, type TelemetryInput, type TelemetryOutcome, type TelemetrySource, type TelemetryWriter } from "../../telemetry/index.ts";
 import { containsCredential, createJevToolRouter, readJevKey, truncateIntent, type LoadedConfig } from "./shared.ts";
-import { loadOmpConfig, ompProvidersPath } from "./config.ts";
+import { loadOmpConfig } from "./config.ts";
 import type { HostPort, HostToolInfo } from "../core/port.ts";
 import { LEGACY_COMMAND, LEGACY_TOOL, LEGACY_TOOLS, lockConflict, ompPluginsLockPath, OWN_COMMAND_DESCRIPTION, readLockFile, runtimeConflict } from "./legacy.ts";
 import { createOmpGates } from "./gates.ts";
@@ -50,7 +50,7 @@ import { JEV_PLAN_PARAMETERS, JEV_PLAN_TOOL, runJevPlan } from "./plan.ts";
 import { effectiveEffort, suggestEffort, type EffortLevel } from "./effort.ts";
 import { jevCompletions, runJevCommand } from "./commands.ts";
 import { legacyConfigDir, loadLegacyConfig, type LegacyConfig } from "./legacy-config.ts";
-import { createJevAccess, type JevAccess } from "../shared/jev-access.ts";
+import { attemptTokens, createJevAccess, type JevAccess } from "../shared/jev-access.ts";
 import { formatJevDebugCompact, jevDebugDetails, renderJevDebug, type JevDebugDetails } from "../shared/jev-debug.ts";
 import { join } from "node:path";
 import { assessOffResult, createOmpStop, type OmpStop } from "./stop.ts";
@@ -78,7 +78,7 @@ export interface OmpHostDeps {
   packageRoot?: string;
   /** Legacy `@omp-jev/harness` config files, read-only (T105 C10); default `$HOME/.omp/agent`. */
   loadLegacyConfig: () => Promise<LegacyConfig>;
-  /** Provider config path: prefer the harness directory, then the legacy OMP location. */
+  /** Legacy `jev-providers.json` (T105 C9), read-only; default `$HOME/.omp/agent/jev-providers.json`. */
   legacyProvidersPath?: string;
   /** Reads the legacy providers file and chain key files; default `readFileSync(path, "utf8")`. */
   readFile?: (path: string) => string;
@@ -104,7 +104,7 @@ export function defaultOmpHostDeps(overrides: Partial<OmpHostDeps> = {}): OmpHos
     detectProfile,
     readPluginsLock: readLockFile(env.HOME ? ompPluginsLockPath(env.HOME, env) : undefined),
     loadLegacyConfig: async () => (env.HOME ? loadLegacyConfig(legacyConfigDir(env.HOME)) : { dir: "" }),
-    ...(env.HOME ? { legacyProvidersPath: ompProvidersPath(env.HOME) } : {}),
+    ...(env.HOME ? { legacyProvidersPath: join(legacyConfigDir(env.HOME), "jev-providers.json") } : {}),
     writeDebug: (text) => process.stderr.write(`${text}\n`),
     ...overrides,
   };
@@ -243,9 +243,11 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
     return true;
   }
 
+  /** OMP loads this extension again for every in-process subagent session: one diagnostic per host, the count stays in status. */
   const recordDuplicates = (state: SessionState) => {
-    for (; duplicatesRecorded < duplicateLoads; duplicatesRecorded++)
+    if (duplicatesRecorded === 0 && duplicateLoads > 0)
       record(state, { runId: state.runId, decisionId: `dec_${deps.newId()}`, kind: "diagnostic", outcome: "skipped", durationMs: 0, source: "adapter:duplicate_load" });
+    duplicatesRecorded = duplicateLoads;
   };
 
   const noteFallback = (state: SessionState, reason: string) => {
@@ -306,7 +308,7 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
     }
   };
 
-  /** Runtime check at session start; an unavailable host registry cannot prove ownership, so fail closed. */
+  /** Runtime check at session start; host runtime actions are unavailable during load. */
   function sessionConflict(): string | undefined {
     if (lockReason) return lockReason;
     let tools: readonly HostToolInfo[] | undefined;
@@ -315,9 +317,7 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
     } catch {
       tools = undefined;
     }
-    const commands = commandRows();
-    if (!tools || !commands) return "OMP registry unavailable at session_start";
-    return runtimeConflict(tools, commands, ownsCommand, deps.packageRoot);
+    return runtimeConflict(tools, commandRows(), ownsCommand, deps.packageRoot);
   }
 
   async function startSession() {
@@ -438,7 +438,7 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
       now: deps.now, newId: () => `att_${deps.newId()}`, waitMs: config.budget.waitMs,
       onAttempt: (attempt: JevAttempt) =>
         record(state, { runId: state.runId, decisionId, attemptId: attempt.attemptId, kind: "jev_attempt",
-          outcome: attempt.status === "ok" ? "ok" : "unavailable", durationMs: attempt.durationMs, source: `jev:${attempt.status}` }),
+          outcome: attempt.status === "ok" ? "ok" : "unavailable", durationMs: attempt.durationMs, source: `jev:${attempt.status}`, ...attemptTokens(attempt) }),
     });
     const client = request("route");
 
@@ -510,7 +510,7 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
       ? `OMP ${profile.version}: profile ${profile.spec.id} (events: ${profile.spec.events.join(", ")})`
       : `OMP ${profile.version ?? "unknown"}: no profile (${profile.reason}); all capabilities off`;
     const state = session;
-    if (!state) return [`Jev: off (no session)`, "", "[运行时]", profileLine].join("\n");
+    if (!state) return [`Jev: off (no session)`, profileLine].join("\n");
     const { loaded, mode } = state;
     const configLine =
       loaded.source === "invalid" ? `config: invalid (${loaded.reason}); forced off; file left unchanged: ${loaded.path}`
@@ -518,43 +518,31 @@ export function createOmpHost(api: OmpExtensionAPI, deps: OmpHostDeps, onShutdow
       : `config: defaults (no file at ${loaded.path})`;
     return [
       `Jev: ${mode} (this session)`,
-      "",
-      "[运行时]",
-      `  ${profileLine}`,
-      `  ${configLine}`,
-      ...(state.legacyConflict ? [`  legacy conflict: ${state.legacyConflict}; forced off; /${LEGACY_COMMAND} and ${LEGACY_TOOL} not registered by pi-jev-harness`] : []),
-      `  legacy config: ${state.legacy.acceptance || state.legacy.autorun || state.legacy.toolGroups ? `mapped read-only from ${state.legacy.dir}` : "none"}`,
-      "",
-      "[能力]",
-      ...state.stop.statusLines(mode).map((line) => `  ${line}`),
-      ...(mode !== "off" ? gates.statusLines(state).map((line) => `  ${line}`) : []),
-      "",
-      "[出站与路由]",
-      `  ${loaded.config.outbound.taskIntent
+      profileLine,
+      configLine,
+      ...(state.legacyConflict ? [`legacy conflict: ${state.legacyConflict}; forced off; /${LEGACY_COMMAND} and ${LEGACY_TOOL} not registered by pi-jev-harness`] : []),
+      `legacy config: ${state.legacy.acceptance || state.legacy.autorun || state.legacy.toolGroups ? `mapped read-only from ${state.legacy.dir}` : "none"}`,
+      ...state.stop.statusLines(mode),
+      ...(mode !== "off" ? gates.statusLines(state) : []),
+      loaded.config.outbound.taskIntent
         ? "outbound: task intent allowed (credential check on)"
-        : "outbound: 任务意图出站未开启 (outbound.taskIntent=false; no Jev request is sent)"}`,
-      `  路由：${mode === "off" ? "关闭" : mode === "on" && loaded.config.router.tools === "on" ? "应用" : "仅观察"}`,
-      `  router: tools ${loaded.config.router.tools} (applied only in mode on with router.tools on)`,
-      `  ${capabilityLine(state)}`,
-      "",
-      "[Jev provider]",
-      `  Jev key: ${readJevKey(deps.env) ? "present" : "missing"}`,
-      ...state.jev.statusLines().map((line) => `  ${line}`),
-      `  Jev debug: ${state.debug ? "on" : "off"} (this session; raw outbound task context when enabled)`,
-      `  Jev requests this session: ${state.requests}`,
-      `  Jev provider chain: last answered ${state.chain.lastAnswered ?? "none"}; fallbacks this session: ${state.chain.fallbacks}; last fallback: ${state.chain.lastReason ?? "none"}`,
-      "",
-      "[会话与上下文]",
-      `  tasks: ${state.tasks}; ${profile.spec?.stopEvent ?? "stop"} seen: ${state.stops}`,
-      ...state.context.statusLines(mode).map((line) => `  ${line}`),
-      ...state.compaction.statusLines(mode).map((line) => `  ${line}`),
-      `  ${compactHandler === "registered"
+        : "outbound: 任务意图出站未开启 (outbound.taskIntent=false; no Jev request is sent)",
+      `路由：${mode === "off" ? "关闭" : mode === "on" && loaded.config.router.tools === "on" ? "应用" : "仅观察"}`,
+      `router: tools ${loaded.config.router.tools} (applied only in mode on with router.tools on)`,
+      capabilityLine(state),
+      `Jev key: ${readJevKey(deps.env) ? "present" : "missing"}`,
+      ...state.jev.statusLines(),
+      `Jev debug: ${state.debug ? "on" : "off"} (this session; raw outbound task context when enabled)`,
+      `Jev requests this session: ${state.requests}`,
+      `tasks: ${state.tasks}; ${profile.spec?.stopEvent ?? "stop"} seen: ${state.stops}`,
+      ...state.context.statusLines(mode),
+      ...state.compaction.statusLines(mode),
+      compactHandler === "registered"
         ? "session_before_compact: registered at startup (OMP speculative compaction disabled)"
-        : "session_before_compact: not registered (compaction off at startup; turning it on needs an omp restart)"}`,
-      "",
-      "[问题与回退]",
-      `  fallback reasons (adapter/tool routing): ${state.fallbackReasons.length ? state.fallbackReasons.join("; ") : "none"}`,
-      ...(duplicateLoads ? [`  duplicate loads ignored: ${duplicateLoads}`] : []),
+        : "session_before_compact: not registered (compaction off at startup; turning it on needs an omp restart)",
+      `Jev provider chain: last answered ${state.chain.lastAnswered ?? "none"}; fallbacks this session: ${state.chain.fallbacks}; last fallback: ${state.chain.lastReason ?? "none"}`,
+      `fallback reasons (adapter/tool routing): ${state.fallbackReasons.length ? state.fallbackReasons.join("; ") : "none"}`,
+      ...(duplicateLoads ? [`duplicate loads ignored: ${duplicateLoads}`] : []),
     ].join("\n");
   }
 

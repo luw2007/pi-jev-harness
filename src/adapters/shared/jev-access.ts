@@ -157,3 +157,9 @@ export function createJevAccess(options: JevAccessOptions): JevAccess {
     },
   };
 }
+
+/** Telemetry `tokens` for one physical Jev request; empty (usage unknown) when the provider reported none. */
+export function attemptTokens(attempt: JevAttempt): { tokens?: { input: number | null; output: number | null } } {
+  if (attempt.inputTokens === undefined && attempt.outputTokens === undefined) return {};
+  return { tokens: { input: attempt.inputTokens ?? null, output: attempt.outputTokens ?? null } };
+}

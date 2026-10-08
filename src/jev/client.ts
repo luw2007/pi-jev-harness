@@ -20,6 +20,17 @@ import type {
 } from "./types.ts";
 import { choiceBody, noulBody, parseChoiceResponse, parseNoulResponse, validChoiceQuestions, validNoulQuestions } from "./wire.ts";
 
+/** `usage.input_tokens` / `output_tokens` when the provider reports them as non-negative finite numbers. */
+function reportedUsage(raw: unknown): { inputTokens?: number; outputTokens?: number } {
+  if (raw === null || typeof raw !== "object" || !("usage" in raw)) return {};
+  const usage = raw.usage;
+  if (usage === null || typeof usage !== "object") return {};
+  const valid = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n >= 0;
+  const input = "input_tokens" in usage ? usage.input_tokens : undefined;
+  const output = "output_tokens" in usage ? usage.output_tokens : undefined;
+  return { ...(valid(input) ? { inputTokens: input } : {}), ...(valid(output) ? { outputTokens: output } : {}) };
+}
+
 export interface JevClientOptions {
   profile: JevProfile;
   /** Bearer key; absent sends no authorization header (keyless internal providers). */
@@ -176,6 +187,7 @@ export function createJevClient(options: JevClientOptions): JevClient {
     const read = { bytes: 0 };
     let status: JevAttemptStatus;
     let httpStatus: number | undefined;
+    let usage: { inputTokens?: number; outputTokens?: number } = {};
     let outcome: { ok: true; evidence: E[] } | { ok: false; error: JevError };
     let responseBody: unknown;
     const tracing = enabled();
@@ -219,6 +231,7 @@ export function createJevClient(options: JevClientOptions): JevClient {
         if (parsed?.ok) {
           status = "ok";
           outcome = { ok: true, evidence: parsed.value };
+          usage = reportedUsage(raw);
         } else {
           status = "malformed";
           outcome = { ok: false, error: parsed ? { kind: "malformed", wire: parsed.error } : { kind: "malformed" } };
@@ -242,6 +255,7 @@ export function createJevClient(options: JevClientOptions): JevClient {
       status,
       ...(httpStatus === undefined ? {} : { httpStatus }),
       requestBytes,
+      ...usage,
       responseBytes: read.bytes,
     };
     if (tracing) observe({ phase: "resp", attemptId: debugBody(attemptId, key), decisionId: debugBody(call.decisionId, key),

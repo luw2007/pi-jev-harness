@@ -144,6 +144,18 @@ test("noul batch round trip", async (t) => {
   assert.deepEqual(JSON.parse(server.requests[0]!.body).questions, { safe: { type: "noul", instructions: "Safe?" } });
 });
 
+test("attempt carries provider-reported usage; invalid values are dropped", async (t) => {
+  const reply = (usage: unknown) => JSON.stringify({ model: MODEL, answers: { safe: { type: "noul", noul: 0.25 } }, usage });
+  let body = reply({ input_tokens: 1234, output_tokens: 56 });
+  const server = await fakeServer((_req, res) => json(res, 200, body));
+  t.after(() => server.close());
+  const { client, attempts } = setup(server.url);
+  await client.noul(noulQuestions, { decisionId: "d", state: "s" });
+  body = reply({ input_tokens: -1, output_tokens: "x" });
+  await client.noul(noulQuestions, { decisionId: "d", state: "s" });
+  assert.deepEqual(attempts.map((a) => [a.inputTokens, a.outputTokens]), [[1234, 56], [undefined, undefined]]);
+});
+
 test("HTTP 4xx/5xx yield category only; provider error text never reaches the result", async (t) => {
   for (const status of [400, 401, 402, 429, 500, 503]) {
     const server = await fakeServer((_req, res) => json(res, status, JSON.stringify({ error: SECRET })));

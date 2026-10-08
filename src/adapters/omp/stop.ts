@@ -29,7 +29,7 @@
  */
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { JevAttempt, JevCapability, JevClient } from "../../jev/index.ts";
-import type { JevAccess } from "../shared/jev-access.ts";
+import { attemptTokens, type JevAccess } from "../shared/jev-access.ts";
 import { recordToolResult, type Evidence, type FileChange } from "../../harness/index.ts";
 import type { TelemetryInput } from "../../telemetry/index.ts";
 import type { AuditInput } from "../../telemetry/audit.ts";
@@ -219,7 +219,7 @@ export function createOmpStop(deps: OmpStopDeps): OmpStop {
         newId: () => `att_${deps.newId()}`,
         waitMs: config.budget.waitMs,
         onAttempt: (attempt: JevAttempt) => deps.record({ runId: deps.runId, decisionId: `dec_${deps.newId()}`, attemptId: attempt.attemptId, kind: "jev_attempt",
-          outcome: attempt.status === "ok" ? "ok" : "unavailable", durationMs: attempt.durationMs, source: `jev:${attempt.status}` }),
+          outcome: attempt.status === "ok" ? "ok" : "unavailable", durationMs: attempt.durationMs, source: `jev:${attempt.status}`, ...attemptTokens(attempt) }),
       }));
     }
     return clients.get(capability);

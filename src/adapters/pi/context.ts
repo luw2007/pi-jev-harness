@@ -56,7 +56,7 @@ import {
 import { TYPESAFE_PROFILE, type JevAttempt, type JevClient, type JevErrorKind, type JevProfile } from "../../jev/index.ts";
 import type { TelemetryInput, TelemetryOutcome } from "../../telemetry/index.ts";
 import { containsCredential, type AdapterConfig, type AdapterMode } from "./config.ts";
-import { createJevAccess, type JevAccess } from "../shared/jev-access.ts";
+import { attemptTokens, createJevAccess, type JevAccess } from "../shared/jev-access.ts";
 
 export const RECALL_TOOL = "jev_recall";
 
@@ -208,7 +208,7 @@ export function createPiContextHook(deps: ContextHookDeps): PiContextHook {
     ...(deps.model ? { model: deps.model } : {}),
     onAttempt: (attempt: JevAttempt) =>
       deps.record({ runId: deps.runId, decisionId: attempt.decisionId, attemptId: attempt.attemptId, kind: "jev_attempt",
-        outcome: attempt.status === "ok" ? "ok" : "unavailable", durationMs: attempt.durationMs, source: `jev:${attempt.status}` }),
+        outcome: attempt.status === "ok" ? "ok" : "unavailable", durationMs: attempt.durationMs, source: `jev:${attempt.status}`, ...attemptTokens(attempt) }),
   });
 
   // The reducer's ask is fixed at construction; per-call data rides on the abort signal.

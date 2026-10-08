@@ -16,7 +16,7 @@
 import { compact } from "../../../vendor/fast-jev/compact.ts";
 import type { CompactResult, JevAnswer, JevAsker, JevQuestions, Message, ToolResult, ToolUse } from "../../../vendor/fast-jev/types.ts";
 import type { JevAttempt, JevClient } from "../../jev/index.ts";
-import { createJevAccess, type JevAccess } from "../shared/jev-access.ts";
+import { attemptTokens, createJevAccess, type JevAccess } from "../shared/jev-access.ts";
 import type { TelemetryInput } from "../../telemetry/index.ts";
 import type { OmpContextSettings } from "./context-settings.ts";
 import { ompSessionView } from "./port.ts";
@@ -309,7 +309,7 @@ export function createOmpCompaction(deps: OmpCompactionDeps): OmpCompaction {
     ...(settings.model ? { model: settings.model } : {}),
     onAttempt: (attempt: JevAttempt) =>
       deps.record({ runId: deps.runId, decisionId: attempt.decisionId, attemptId: attempt.attemptId, kind: "jev_attempt",
-        outcome: attempt.status === "ok" ? "ok" : "unavailable", durationMs: attempt.durationMs, source: `jev:${attempt.status}` }),
+        outcome: attempt.status === "ok" ? "ok" : "unavailable", durationMs: attempt.durationMs, source: `jev:${attempt.status}`, ...attemptTokens(attempt) }),
   });
 
   const outboundBlock = (): string | undefined =>

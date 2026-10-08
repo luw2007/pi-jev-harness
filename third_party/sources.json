@@ -320,7 +320,7 @@
       "diff_summary": "C 相对上游的改动：LOCAL PATCH allowDroppingCalls（默认 false）、ToolCall.cacheKey、FittedState.representedCalls、CompactResult 未提问候选统计等。"
     },
     "files": [
-      "src/vendor/fast-jev/compact.ts → vendor/fast-jev/compact.ts → 95ed502fd21a53d3bad8e1af0112d419ac1fafc53ddac8721af56960e0f091c4 → d413c4053e09ab83e686ac4ecbf5528e7badba281c8e7c248e2d9f96a030b319",
+      "src/vendor/fast-jev/compact.ts → vendor/fast-jev/compact.ts → 95ed502fd21a53d3bad8e1af0112d419ac1fafc53ddac8721af56960e0f091c4 → 5f0baabefce7ca9dda7b26f6cf1a428b9c0f1f3089d293840fc525a574998727",
       "src/vendor/fast-jev/request.ts → vendor/fast-jev/request.ts → aaa0922f89b1a38b304cf8cf922038641338cdae04e1a636c2a618c60c55b53a → a4c6f6b9d69eec7b9cb968bfa3e70fe2cc1542452894e1bc8cea8c99e9011f60",
       "src/vendor/fast-jev/state.ts → vendor/fast-jev/state.ts → fbc0ff76bd4af58825db36d6c2ef93f1e516981ac0de62a9773237a1fb630752 → ed90ac3b8c88a224d443b8743d3e9c1fb31b438dbd26e79d784d5b8e78fc5bb6",
       "src/vendor/fast-jev/types.ts → vendor/fast-jev/types.ts → 26d489ed31709fa0d4c4a91452b917d1f9385873a2278d8a19ab7a3fa8abc190 → 26d489ed31709fa0d4c4a91452b917d1f9385873a2278d8a19ab7a3fa8abc190",
@@ -332,7 +332,7 @@
         "source": "src/vendor/fast-jev/compact.ts",
         "target": "vendor/fast-jev/compact.ts",
         "sha256_source": "95ed502fd21a53d3bad8e1af0112d419ac1fafc53ddac8721af56960e0f091c4",
-        "sha256_target": "d413c4053e09ab83e686ac4ecbf5528e7badba281c8e7c248e2d9f96a030b319"
+        "sha256_target": "5f0baabefce7ca9dda7b26f6cf1a428b9c0f1f3089d293840fc525a574998727"
       },
       {
         "source": "src/vendor/fast-jev/request.ts",

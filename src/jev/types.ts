@@ -42,6 +42,9 @@ export interface JevAttempt {
   requestBytes: number;
   /** Response body bytes actually read before the attempt ended. */
   responseBytes: number;
+  /** Provider-reported `usage.input_tokens` / `usage.output_tokens` of an ok response; absent when not reported. */
+  inputTokens?: number;
+  outputTokens?: number;
 }
 
 /** How a response's reported model is checked against the pinned model. */
